@@ -1,3 +1,4 @@
+import re
 import fitz  # pymupdf
 import unicodedata
 
@@ -10,16 +11,26 @@ JUNK_PATTERNS = [
     'المحتويات', 'الفهرس', 'فهرس المحتويات', 'table of contents', 'contents'
 ]
 
+# Markers that indicate "the real content starts here"
+CONTENT_START_MARKERS = [
+    r'\bchapter\s+(?:one|1|i)\b',
+    r'\bunit\s+(?:one|1|i)\b',
+    r'\blesson\s+(?:one|1|i)\b',
+    r'\bsection\s+(?:one|1|i)\b',
+    r'الفصل\s*(?:الأول|الاول|1)',
+    r'الوحدة\s*(?:الأولى|الاولى|1)',
+    r'الباب\s*(?:الأول|الاول|1)',
+    r'الدرس\s*(?:الأول|الاول|1)',
+    r'مقدمة',  # Often the first "real" intro
+    r'\bintroduction\b',
+]
+
 
 def is_toc_page(text: str) -> bool:
     lines = [l.strip() for l in text.split('\n') if l.strip()]
     if len(lines) < 5:
         return False
-    # TOC lines typically end with a number (page number)
-    number_endings = sum(
-        1 for l in lines
-        if l and l.split()[-1].isdigit()
-    )
+    number_endings = sum(1 for l in lines if l and l.split()[-1].isdigit())
     return number_endings / len(lines) > 0.45
 
 
@@ -30,7 +41,6 @@ def is_content_page(text: str) -> bool:
     if is_toc_page(text):
         return False
     text_lower = text.lower()
-    # Any single TOC/copyright marker keyword kills the page
     strong_junk = ['المحتويات', 'الفهرس', 'table of contents', 'isbn', 'حقوق الطبع']
     if any(p in text_lower for p in strong_junk):
         return False
@@ -40,65 +50,78 @@ def is_content_page(text: str) -> bool:
     return True
 
 
-def detect_book_language(full_text: str) -> str:
-    arabic = sum(
-        1 for c in full_text
-        if '؀' <= c <= 'ۿ' or 'ﭐ' <= c <= '﷿' or 'ﹰ' <= c <= '﻿'
-    )
-    latin = sum(1 for c in full_text if c.isascii() and c.isalpha())
-    return "ar" if arabic > latin * 0.3 else "en"
-
-
-def extract_pdf(pdf_path: str, job_id: str, max_pages: int = 0) -> tuple[list[str], str]:
-    doc = fitz.open(pdf_path)
-    total_pages = len(doc)
-    limit = max_pages if max_pages > 0 else total_pages
-
-    all_raw_text = []
-    pages_text = []
-    for i, page in enumerate(doc):
-        if i >= limit:
-            break
-        text = unicodedata.normalize("NFKC", page.get_text("text")).strip()
-        if text:
-            all_raw_text.append(text)
-            if is_content_page(text):
-                pages_text.append(text)
-
-    doc.close()
-
-    if not pages_text:
-        raise Exception("No content pages found. The PDF may be fully scanned or have no extractable text.")
-
-    # Detect language once across the entire book (covers chemical-symbol chunks)
-    book_lang = detect_book_language("\n".join(all_raw_text))
-
-    full_text = "\n\n".join(pages_text)
-    return split_into_chunks(full_text), book_lang
-
-
 def is_quality_chunk(text: str) -> bool:
-    """Reject only chunks that are pure symbols/numbers with no real words."""
     if not text or len(text) < 100:
         return False
-
     arabic = sum(
         1 for c in text
         if '؀' <= c <= 'ۿ' or 'ﭐ' <= c <= '﷿' or 'ﹰ' <= c <= '﻿'
     )
     latin = sum(1 for c in text if c.isascii() and c.isalpha())
     letters = arabic + latin
-
-    # Need at least 80 readable letters (AR or EN) to be worth analyzing
     if letters < 80:
         return False
-
     total_meaningful = sum(1 for c in text if not c.isspace())
     if total_meaningful == 0:
         return False
-
-    # At least 15% of non-whitespace chars must be actual letters
     return letters / total_meaningful >= 0.15
+
+
+def find_content_start(pages: list[str]) -> int:
+    """Find the first page that contains a chapter/unit/lesson marker."""
+    for i, page in enumerate(pages):
+        page_lower = page.lower()
+        for marker in CONTENT_START_MARKERS:
+            if re.search(marker, page_lower):
+                return i
+    return 0  # fallback: don't skip if no marker found
+
+
+def detect_book_language(full_text: str) -> str:
+    arabic = sum(
+        1 for c in full_text
+        if '؀' <= c <= 'ۿ' or 'ﭐ' <= c <= '﷿' or 'ﹰ' <= c <= '﻿'
+    )
+    latin = sum(1 for c in full_text if c.isascii() and c.isalpha())
+    if arabic > 200:
+        return "ar"
+    return "ar" if arabic > latin * 0.3 else "en"
+
+
+def extract_pdf(pdf_path: str, job_id: str, max_pages: int = 0) -> tuple[list[str], str]:
+    doc = fitz.open(pdf_path)
+    total_pages = len(doc)
+
+    # First pass: extract all pages (normalized)
+    all_pages = []
+    for i, page in enumerate(doc):
+        text = unicodedata.normalize("NFKC", page.get_text("text")).strip()
+        all_pages.append(text)
+    doc.close()
+
+    # Find where real content begins (skip cover/preface/dedication)
+    start_idx = find_content_start(all_pages)
+
+    # Apply max_pages limit AFTER skipping intro
+    end_idx = start_idx + max_pages if max_pages > 0 else total_pages
+
+    # Second pass: keep only content pages
+    pages_text = []
+    raw_text_for_lang = []
+    for i, text in enumerate(all_pages):
+        if i < start_idx or i >= end_idx:
+            continue
+        if text:
+            raw_text_for_lang.append(text)
+            if is_content_page(text):
+                pages_text.append(text)
+
+    if not pages_text:
+        raise Exception("No content pages found after intro skip. The PDF may be fully scanned.")
+
+    book_lang = detect_book_language("\n".join(raw_text_for_lang))
+    full_text = "\n\n".join(pages_text)
+    return split_into_chunks(full_text), book_lang
 
 
 def split_into_chunks(content: str) -> list[str]:
@@ -132,7 +155,6 @@ def split_into_chunks(content: str) -> list[str]:
     if not raw_chunks and content.strip():
         raw_chunks = [content.strip()]
 
-    # Enforce MAX_WORDS per chunk
     final_chunks = []
     for chunk in raw_chunks:
         words = chunk.split()
@@ -144,7 +166,5 @@ def split_into_chunks(content: str) -> list[str]:
                 if piece:
                     final_chunks.append(piece)
 
-    # Quality filter: drop garbage chunks (too many symbols, not enough letters)
     final_chunks = [c for c in final_chunks if is_quality_chunk(c)]
-
     return final_chunks

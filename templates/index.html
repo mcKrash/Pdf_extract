@@ -8,420 +8,606 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      font-family: 'Segoe UI', sans-serif;
-      background: #0f1117;
+      font-family: 'Segoe UI', 'Tajawal', sans-serif;
+      background: radial-gradient(ellipse at top, #1a1d2e 0%, #0a0c14 60%);
       color: #e2e8f0;
       min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 40px 20px;
+      padding: 32px 20px;
     }
 
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
     h1 {
-      font-size: 2rem;
-      font-weight: 700;
-      color: #7c83fd;
+      font-size: 2.2rem;
+      background: linear-gradient(135deg, #7c83fd 0%, #c084fc 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
       margin-bottom: 6px;
     }
-
-    .subtitle {
-      color: #64748b;
-      margin-bottom: 40px;
-      font-size: 0.95rem;
-    }
+    .subtitle { color: #64748b; font-size: 0.95rem; }
 
     .card {
-      background: #1e2130;
+      background: rgba(30, 33, 48, 0.7);
+      backdrop-filter: blur(10px);
       border: 1px solid #2d3148;
-      border-radius: 14px;
-      padding: 32px;
-      width: 100%;
-      max-width: 680px;
+      border-radius: 16px;
+      padding: 28px;
+      margin-bottom: 20px;
     }
 
     label {
       display: block;
-      font-size: 0.85rem;
+      font-size: 0.78rem;
       color: #94a3b8;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
       text-transform: uppercase;
-      letter-spacing: 0.05em;
+      letter-spacing: 0.06em;
+      font-weight: 600;
     }
 
-    input[type="text"] {
+    input[type="text"], input[type="number"], select {
       width: 100%;
       background: #0f1117;
       border: 1px solid #2d3148;
-      border-radius: 8px;
+      border-radius: 10px;
       padding: 12px 16px;
       color: #e2e8f0;
       font-size: 0.95rem;
       outline: none;
       transition: border 0.2s;
     }
-
-    input[type="text"]:focus {
-      border-color: #7c83fd;
-    }
-
-    .row {
-      display: flex;
-      gap: 10px;
-      margin-top: 10px;
-    }
+    input:focus, select:focus { border-color: #7c83fd; }
 
     button {
       padding: 12px 24px;
-      border-radius: 8px;
+      border-radius: 10px;
       border: none;
       cursor: pointer;
       font-size: 0.95rem;
       font-weight: 600;
-      transition: opacity 0.2s;
+      transition: all 0.2s;
     }
-
     button:disabled { opacity: 0.4; cursor: not-allowed; }
 
-    #scanBtn {
-      background: #2d3148;
-      color: #e2e8f0;
-    }
+    #scanBtn { background: #2d3148; color: #e2e8f0; }
+    #scanBtn:hover:not(:disabled) { background: #3a3f5c; }
 
     #generateBtn {
-      background: #7c83fd;
+      background: linear-gradient(135deg, #7c83fd 0%, #a855f7 100%);
       color: #fff;
       flex: 1;
+      font-size: 1rem;
     }
+    #generateBtn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(124,131,253,0.4); }
 
-    #pdfSelect {
-      width: 100%;
-      margin-top: 16px;
-      background: #0f1117;
-      border: 1px solid #2d3148;
-      border-radius: 8px;
-      padding: 12px 16px;
-      color: #e2e8f0;
-      font-size: 0.9rem;
-      outline: none;
-      display: none;
-    }
-
-    #errorMsg {
-      color: #f87171;
-      font-size: 0.88rem;
-      margin-top: 10px;
-      display: none;
-    }
+    #pdfSelect { margin-top: 14px; display: none; }
+    #errorMsg { color: #f87171; font-size: 0.88rem; margin-top: 10px; display: none; }
 
     /* Progress */
-    #progressSection {
-      margin-top: 28px;
-      display: none;
+    #progressSection { display: none; }
+    .progress-row {
+      display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;
     }
-
-    .progress-label {
-      font-size: 0.88rem;
-      color: #94a3b8;
-      margin-bottom: 8px;
-    }
-
+    #progressPct { font-size: 1.2rem; font-weight: 700; color: #c084fc; }
     .progress-bar-wrap {
-      background: #0f1117;
-      border-radius: 999px;
-      height: 8px;
-      overflow: hidden;
+      background: #0f1117; border-radius: 999px; height: 10px; overflow: hidden;
     }
-
     .progress-bar-fill {
       height: 100%;
-      background: linear-gradient(90deg, #7c83fd, #a78bfa);
-      border-radius: 999px;
+      background: linear-gradient(90deg, #7c83fd 0%, #c084fc 100%);
       width: 0%;
       transition: width 0.4s ease;
     }
+    #progressSections { margin-top: 8px; font-size: 0.85rem; color: #94a3b8; }
 
     /* Results */
-    #resultsSection {
-      margin-top: 32px;
-      display: none;
+    #resultsSection { display: none; }
+    .results-toolbar {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 20px;
     }
-
-    .results-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 16px;
+    .results-title h2 {
+      font-size: 1.3rem; color: #c084fc;
     }
-
-    .results-header h2 {
-      font-size: 1.1rem;
-      color: #7c83fd;
-    }
-
-    #downloadBtn {
-      background: #22c55e22;
-      color: #22c55e;
-      border: 1px solid #22c55e44;
+    .results-title .meta { font-size: 0.85rem; color: #64748b; margin-top: 2px; }
+    .download-btns { display: flex; gap: 8px; }
+    .dl-btn {
+      background: #1e2130;
+      color: #c084fc;
+      border: 1px solid #c084fc55;
       font-size: 0.85rem;
-      padding: 8px 16px;
+      padding: 8px 14px;
+      border-radius: 8px;
     }
+    .dl-btn:hover { background: #c084fc22; }
 
+    /* Section cards grid */
+    .sections-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+      gap: 18px;
+    }
     .section-card {
-      background: #0f1117;
+      background: linear-gradient(135deg, rgba(30,33,48,0.95), rgba(20,22,34,0.95));
       border: 1px solid #2d3148;
-      border-radius: 10px;
-      margin-bottom: 12px;
+      border-radius: 14px;
       overflow: hidden;
-    }
-
-    .section-header {
-      padding: 14px 18px;
+      transition: transform 0.2s, border-color 0.2s;
       cursor: pointer;
+    }
+    .section-card:hover {
+      transform: translateY(-2px);
+      border-color: #7c83fd66;
+    }
+
+    /* Subject color themes */
+    .subj-chemistry { --c: #10b981; }
+    .subj-physics { --c: #3b82f6; }
+    .subj-math { --c: #f59e0b; }
+    .subj-biology { --c: #ec4899; }
+    .subj-general { --c: #7c83fd; }
+
+    .card-header {
+      background: linear-gradient(135deg, var(--c, #7c83fd) 0%, transparent 100%);
+      padding: 18px 20px;
+      border-bottom: 1px solid #2d3148;
       display: flex;
-      justify-content: space-between;
       align-items: center;
-      font-size: 0.95rem;
-      font-weight: 600;
-      color: #c4c9ff;
-      user-select: none;
+      gap: 14px;
     }
-
-    .section-header:hover { background: #1a1e2e; }
-
-    .section-body {
-      padding: 0 18px;
-      max-height: 0;
-      overflow: hidden;
-      transition: max-height 0.3s ease, padding 0.3s;
+    .section-badge {
+      width: 44px; height: 44px;
+      border-radius: 12px;
+      background: rgba(0,0,0,0.4);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 1.1rem; color: #fff;
+      border: 1px solid rgba(255,255,255,0.1);
+      flex-shrink: 0;
     }
-
-    .section-body.open {
-      max-height: 4000px;
-      padding: 16px 18px;
+    .section-info { flex: 1; min-width: 0; }
+    .section-title {
+      font-size: 1rem; font-weight: 700; color: #fff;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
+    .section-meta {
+      font-size: 0.78rem; color: rgba(255,255,255,0.7);
+      margin-top: 3px;
+      display: flex; gap: 10px;
+    }
+    .subject-icon { font-size: 1.5rem; }
 
-    .section-body pre {
-      white-space: pre-wrap;
-      word-break: break-word;
-      font-family: inherit;
+    .card-stats {
+      display: grid; grid-template-columns: 1fr 1fr;
+      padding: 14px 20px; gap: 10px;
+      border-bottom: 1px solid #2d3148;
+    }
+    .stat {
+      display: flex; flex-direction: column; gap: 2px;
+    }
+    .stat-label { font-size: 0.7rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
+    .stat-value { font-size: 0.95rem; font-weight: 600; color: #e2e8f0; }
+    .validation-bar {
+      height: 4px; background: #2d3148; border-radius: 2px; overflow: hidden; margin-top: 4px;
+    }
+    .validation-bar-fill {
+      height: 100%; background: linear-gradient(90deg, #10b981, #22c55e); width: 100%;
+    }
+    .validation-bar-fill.invalid { background: linear-gradient(90deg, #ef4444, #f87171); width: 30%; }
+
+    /* Expanded detail view (modal-like) */
+    .detail-modal {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.85); backdrop-filter: blur(8px);
+      display: none; align-items: flex-start; justify-content: center;
+      z-index: 100; padding: 40px 20px;
+      overflow-y: auto;
+    }
+    .detail-modal.open { display: flex; }
+    .detail-content {
+      background: #1a1d2e;
+      border: 1px solid #2d3148;
+      border-radius: 18px;
+      max-width: 900px; width: 100%;
+      padding: 36px;
+      position: relative;
+    }
+    .close-btn {
+      position: absolute; top: 16px; right: 16px;
+      width: 36px; height: 36px;
+      background: #0f1117; border: 1px solid #2d3148;
+      border-radius: 50%; cursor: pointer; color: #e2e8f0;
+      font-size: 1.1rem;
+    }
+    .detail-content h2 {
+      font-size: 1.6rem; color: #fff; margin-bottom: 8px;
+    }
+    .detail-content .meta-row {
+      display: flex; gap: 16px; color: #94a3b8; font-size: 0.88rem; margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+    .section-block {
+      margin-bottom: 24px;
+      padding: 18px;
+      background: #0f1117;
+      border-radius: 12px;
+      border-left: 3px solid var(--c, #7c83fd);
+    }
+    .rtl .section-block { border-left: none; border-right: 3px solid var(--c, #7c83fd); }
+    .section-block h3 {
+      font-size: 1rem; color: #c084fc; margin-bottom: 12px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .section-block ul { padding-left: 20px; }
+    .rtl .section-block ul { padding-left: 0; padding-right: 20px; }
+    .section-block li { margin-bottom: 6px; line-height: 1.7; }
+    .section-block p { line-height: 1.8; color: #cbd5e1; }
+
+    .term-row {
+      display: flex; gap: 12px; padding: 8px 0;
+      border-bottom: 1px solid #2d3148;
+    }
+    .term-row:last-child { border-bottom: none; }
+    .term-name { font-weight: 700; color: #c084fc; min-width: 140px; flex-shrink: 0; }
+    .term-def { color: #cbd5e1; }
+
+    .question {
+      margin-bottom: 16px; padding: 14px;
+      background: rgba(124,131,253,0.06);
+      border-radius: 10px;
+    }
+    .q-text { font-weight: 600; margin-bottom: 8px; color: #fff; }
+    .q-options { padding-left: 14px; margin-bottom: 8px; color: #cbd5e1; line-height: 1.8; }
+    .rtl .q-options { padding-left: 0; padding-right: 14px; }
+    .q-answer {
+      padding: 8px 12px;
+      background: rgba(34,197,94,0.1);
+      border-left: 3px solid #22c55e;
+      border-radius: 6px;
+      color: #86efac;
       font-size: 0.9rem;
-      line-height: 1.7;
-      color: #cbd5e1;
     }
+    .rtl .q-answer { border-left: none; border-right: 3px solid #22c55e; }
 
-    .chevron { transition: transform 0.3s; font-size: 0.8rem; }
-    .open-chevron { transform: rotate(180deg); }
+    .rtl { direction: rtl; text-align: right; }
   </style>
 </head>
 <body>
 
-  <h1>📚 PDF Scholar</h1>
-  <p class="subtitle">AI-powered lesson extraction & exam prep — fully local</p>
+<div class="container">
 
+  <div class="header">
+    <h1>📚 PDF Scholar</h1>
+    <p class="subtitle">AI-powered lesson extraction with structured study data</p>
+  </div>
+
+  <!-- Input -->
   <div class="card">
     <label>Book Folder Path</label>
-    <input type="text" id="folderInput" placeholder="e.g.  C:\Users\ms_10\Documents\Books" />
+    <input type="text" id="folderInput" placeholder="e.g.  C:\Users\ms_10\Downloads" />
 
-    <div class="row">
+    <div style="margin-top:10px;">
       <button id="scanBtn" onclick="scanFolder()">Scan Folder</button>
     </div>
 
-    <select id="pdfSelect" size="1"></select>
+    <select id="pdfSelect"></select>
     <div id="errorMsg"></div>
 
-    <div style="display:flex; gap:12px; margin-top:18px;">
+    <div style="display:flex; gap:14px; margin-top:18px;">
       <div style="flex:1;">
-        <label style="margin-bottom:6px;">Output Language</label>
-        <select id="langSelect" style="width:100%; background:#0f1117; border:1px solid #2d3148; border-radius:8px; padding:10px; color:#e2e8f0;">
+        <label>Output Language</label>
+        <select id="langSelect">
           <option value="auto">Auto-detect</option>
-          <option value="ar">Arabic / العربية</option>
+          <option value="ar">العربية / Arabic</option>
           <option value="en">English</option>
         </select>
       </div>
       <div style="flex:1;">
-        <label style="margin-bottom:6px;">Pages to Process</label>
-        <input type="number" id="pagesInput" value="30" min="1" max="2000"
-               style="width:100%; background:#0f1117; border:1px solid #2d3148; border-radius:8px; padding:10px; color:#e2e8f0;" />
+        <label>Pages to Process</label>
+        <input type="number" id="pagesInput" value="30" min="1" max="2000" />
       </div>
     </div>
 
-    <div class="row" style="margin-top:20px;">
-      <button id="generateBtn" onclick="startGenerate()" disabled>Generate Study Material</button>
+    <div style="display:flex; margin-top:20px;">
+      <button id="generateBtn" onclick="startGenerate()" disabled>✨ Generate Study Material</button>
     </div>
   </div>
 
   <!-- Progress -->
   <div class="card" id="progressSection">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-      <div class="progress-label" id="progressLabel">Initializing...</div>
-      <div id="progressPct" style="font-size:1.1rem; font-weight:700; color:#7c83fd;">0%</div>
+    <div class="progress-row">
+      <div id="progressLabel" style="color:#94a3b8;">Initializing...</div>
+      <div id="progressPct">0%</div>
     </div>
     <div class="progress-bar-wrap">
       <div class="progress-bar-fill" id="progressFill"></div>
     </div>
-    <div id="progressSections" style="margin-top:8px; font-size:0.82rem; color:#64748b;"></div>
+    <div id="progressSections"></div>
   </div>
 
   <!-- Results -->
   <div class="card" id="resultsSection">
-    <div class="results-header">
-      <h2>Study Material</h2>
-      <button id="downloadBtn" onclick="downloadResults()">⬇ Download .md</button>
+    <div class="results-toolbar">
+      <div class="results-title">
+        <h2>📖 Study Material</h2>
+        <div class="meta" id="resultsMeta"></div>
+      </div>
+      <div class="download-btns">
+        <button class="dl-btn" onclick="downloadJson()">⬇ JSON</button>
+        <button class="dl-btn" onclick="downloadMd()">⬇ Markdown</button>
+      </div>
     </div>
-    <div id="resultsList"></div>
+    <div class="sections-grid" id="sectionsGrid"></div>
   </div>
 
-  <script>
-    let currentJobId = null;
-    let pollInterval = null;
+</div>
 
-    function showError(msg) {
-      const el = document.getElementById('errorMsg');
-      el.textContent = msg;
-      el.style.display = msg ? 'block' : 'none';
-    }
+<!-- Detail Modal -->
+<div class="detail-modal" id="detailModal" onclick="if(event.target===this) closeDetail()">
+  <div class="detail-content" id="detailContent"></div>
+</div>
 
-    async function scanFolder() {
-      showError('');
-      const folder = document.getElementById('folderInput').value.trim();
-      if (!folder) return showError('Please enter a folder path.');
+<script>
+const SUBJECT_ICONS = {
+  chemistry: '🧪', physics: '🔬', math: '📐', biology: '🧬', general: '📖'
+};
+const SUBJECT_LABELS = {
+  chemistry: { en: 'Chemistry', ar: 'كيمياء' },
+  physics: { en: 'Physics', ar: 'فيزياء' },
+  math: { en: 'Math', ar: 'رياضيات' },
+  biology: { en: 'Biology', ar: 'أحياء' },
+  general: { en: 'General', ar: 'عام' },
+};
 
-      const btn = document.getElementById('scanBtn');
-      btn.disabled = true;
-      btn.textContent = 'Scanning...';
+let currentJobId = null;
+let pollInterval = null;
+let currentSections = [];
+let currentLang = 'en';
 
-      try {
-        const fd = new FormData();
-        fd.append('folder', folder);
-        const res = await fetch('/scan', { method: 'POST', body: fd });
-        const data = await res.json();
+function showError(msg) {
+  const el = document.getElementById('errorMsg');
+  el.textContent = msg;
+  el.style.display = msg ? 'block' : 'none';
+}
 
-        if (data.error) { showError(data.error); return; }
-
-        const sel = document.getElementById('pdfSelect');
-        sel.innerHTML = '';
-        data.pdfs.forEach(p => {
-          const opt = document.createElement('option');
-          opt.value = p;
-          opt.textContent = p.split(/[\\/]/).pop();
-          sel.appendChild(opt);
-        });
-        sel.style.display = 'block';
-        document.getElementById('generateBtn').disabled = false;
-
-      } catch (e) {
-        showError('Scan failed: ' + e.message);
-      } finally {
-        btn.disabled = false;
-        btn.textContent = 'Scan Folder';
-      }
-    }
-
-    async function startGenerate() {
-      showError('');
-      const sel = document.getElementById('pdfSelect');
-      const pdfPath = sel.value;
-      if (!pdfPath) return showError('No PDF selected.');
-
-      document.getElementById('generateBtn').disabled = true;
-      document.getElementById('progressSection').style.display = 'block';
-      document.getElementById('resultsSection').style.display = 'none';
-      document.getElementById('resultsList').innerHTML = '';
-      setProgress(0, 'Starting...');
-
-      try {
-        const fd = new FormData();
-        fd.append('pdf_path', pdfPath);
-        fd.append('lang', document.getElementById('langSelect').value);
-        fd.append('pages', document.getElementById('pagesInput').value || '30');
-        const res = await fetch('/generate', { method: 'POST', body: fd });
-        const data = await res.json();
-        if (data.error) { showError(data.error); return; }
-        currentJobId = data.job_id;
-        pollInterval = setInterval(pollStatus, 2000);
-      } catch (e) {
-        showError('Failed to start: ' + e.message);
-        document.getElementById('generateBtn').disabled = false;
-      }
-    }
-
-    async function pollStatus() {
-      if (!currentJobId) return;
-      try {
-        const res = await fetch(`/status/${currentJobId}`);
-        const data = await res.json();
-
-        setProgress(data.progress || 0, data.current || data.status, data.done_sections || 0, data.total_sections || 0);
-        renderResults(data.results || []);
-
-        if (data.status === 'done') {
-          clearInterval(pollInterval);
-          document.getElementById('resultsSection').style.display = 'block';
-          document.getElementById('generateBtn').disabled = false;
-        } else if (data.status === 'error') {
-          clearInterval(pollInterval);
-          showError('Error: ' + data.error);
-          document.getElementById('generateBtn').disabled = false;
-        }
-      } catch (e) { /* network blip, keep polling */ }
-    }
-
-    function setProgress(pct, label, done, total) {
-      document.getElementById('progressFill').style.width = pct + '%';
-      document.getElementById('progressLabel').textContent = label;
-      document.getElementById('progressPct').textContent = pct + '%';
-      if (total > 0) {
-        document.getElementById('progressSections').textContent =
-          `Sections completed: ${done} / ${total}`;
-      }
-    }
-
-    function renderResults(results) {
-      const list = document.getElementById('resultsList');
-      // Only add new sections
-      while (list.children.length < results.length) {
-        const idx = list.children.length;
-        const card = document.createElement('div');
-        card.className = 'section-card';
-
-        const header = document.createElement('div');
-        header.className = 'section-header';
-        header.innerHTML = `Section ${idx + 1} <span class="chevron">▼</span>`;
-        header.onclick = () => {
-          body.classList.toggle('open');
-          header.querySelector('.chevron').classList.toggle('open-chevron');
-        };
-
-        const body = document.createElement('div');
-        body.className = 'section-body';
-        const pre = document.createElement('pre');
-        pre.textContent = results[idx];
-        body.appendChild(pre);
-
-        card.appendChild(header);
-        card.appendChild(body);
-        list.appendChild(card);
-
-        if (idx === 0) {
-          body.classList.add('open');
-          header.querySelector('.chevron').classList.add('open-chevron');
-        }
-      }
-
-      if (results.length > 0) {
-        document.getElementById('resultsSection').style.display = 'block';
-      }
-    }
-
-    function downloadResults() {
-      if (currentJobId) window.location.href = `/download/${currentJobId}`;
-    }
-
-    // Allow Enter key on folder input
-    document.getElementById('folderInput').addEventListener('keydown', e => {
-      if (e.key === 'Enter') scanFolder();
+async function scanFolder() {
+  showError('');
+  const folder = document.getElementById('folderInput').value.trim();
+  if (!folder) return showError('Please enter a folder path.');
+  const btn = document.getElementById('scanBtn');
+  btn.disabled = true; btn.textContent = 'Scanning...';
+  try {
+    const fd = new FormData();
+    fd.append('folder', folder);
+    const res = await fetch('/scan', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (data.error) return showError(data.error);
+    const sel = document.getElementById('pdfSelect');
+    sel.innerHTML = '';
+    data.pdfs.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p;
+      opt.textContent = p.split(/[\\/]/).pop();
+      sel.appendChild(opt);
     });
-  </script>
+    sel.style.display = 'block';
+    document.getElementById('generateBtn').disabled = false;
+  } catch (e) {
+    showError('Scan failed: ' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Scan Folder';
+  }
+}
+
+async function startGenerate() {
+  showError('');
+  const pdfPath = document.getElementById('pdfSelect').value;
+  if (!pdfPath) return showError('No PDF selected.');
+
+  document.getElementById('generateBtn').disabled = true;
+  document.getElementById('progressSection').style.display = 'block';
+  document.getElementById('resultsSection').style.display = 'none';
+  document.getElementById('sectionsGrid').innerHTML = '';
+  setProgress(0, 'Starting...', 0, 0);
+
+  try {
+    const fd = new FormData();
+    fd.append('pdf_path', pdfPath);
+    fd.append('lang', document.getElementById('langSelect').value);
+    fd.append('pages', document.getElementById('pagesInput').value || '30');
+    const res = await fetch('/generate', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (data.error) return showError(data.error);
+    currentJobId = data.job_id;
+    pollInterval = setInterval(pollStatus, 2000);
+  } catch (e) {
+    showError('Failed to start: ' + e.message);
+    document.getElementById('generateBtn').disabled = false;
+  }
+}
+
+async function pollStatus() {
+  if (!currentJobId) return;
+  try {
+    const res = await fetch(`/status/${currentJobId}`);
+    const data = await res.json();
+    setProgress(data.progress || 0, data.current || data.status, data.done_sections || 0, data.total_sections || 0);
+    currentLang = data.language || 'en';
+    currentSections = data.results || [];
+    renderSections();
+    if (data.status === 'done') {
+      clearInterval(pollInterval);
+      document.getElementById('generateBtn').disabled = false;
+      const meta = document.getElementById('resultsMeta');
+      meta.textContent = `${data.total_sections} sections • ${data.language === 'ar' ? 'العربية' : 'English'}`;
+    } else if (data.status === 'error') {
+      clearInterval(pollInterval);
+      showError('Error: ' + data.error);
+      document.getElementById('generateBtn').disabled = false;
+    }
+  } catch (e) { /* keep polling */ }
+}
+
+function setProgress(pct, label, done, total) {
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressLabel').textContent = label;
+  document.getElementById('progressPct').textContent = pct + '%';
+  document.getElementById('progressSections').textContent =
+    total > 0 ? `Sections: ${done} / ${total}` : '';
+}
+
+function renderSections() {
+  const grid = document.getElementById('sectionsGrid');
+  const wasEmpty = grid.children.length === 0;
+
+  while (grid.children.length < currentSections.length) {
+    const idx = grid.children.length;
+    grid.appendChild(makeCard(currentSections[idx], idx));
+  }
+
+  if (wasEmpty && currentSections.length > 0) {
+    document.getElementById('resultsSection').style.display = 'block';
+  }
+}
+
+function makeCard(section, idx) {
+  const lang = section.language || currentLang;
+  const ar = lang === 'ar';
+  const subj = section.subject || 'general';
+  const icon = SUBJECT_ICONS[subj] || '📖';
+  const subjLabel = (SUBJECT_LABELS[subj] || SUBJECT_LABELS.general)[ar ? 'ar' : 'en'];
+
+  const card = document.createElement('div');
+  card.className = `section-card subj-${subj}`;
+  card.onclick = () => openDetail(section);
+
+  const objCount = (section.learning_objectives || []).length;
+  const termCount = (section.key_terms || []).length;
+  const mcq = (section.exam?.multiple_choice || []).length;
+  const sa = (section.exam?.short_answer || []).length;
+  const ps = (section.exam?.problem_solving || []).length;
+  const valid = section.scientific_validation?.is_valid !== false;
+
+  card.innerHTML = `
+    <div class="card-header">
+      <div class="section-badge">${String(section.section_number || idx + 1).padStart(2, '0')}</div>
+      <div class="section-info">
+        <div class="section-title">${escapeHtml(section.title || '—')}</div>
+        <div class="section-meta">
+          <span>${icon} ${subjLabel}</span>
+          <span>📖 ${section.estimated_reading_minutes || 0} ${ar ? 'دقيقة' : 'min'}</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-stats">
+      <div class="stat">
+        <span class="stat-label">🎯 ${ar ? 'الأهداف' : 'Objectives'}</span>
+        <span class="stat-value">${objCount}</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">🔑 ${ar ? 'المصطلحات' : 'Terms'}</span>
+        <span class="stat-value">${termCount}</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">❓ ${ar ? 'الأسئلة' : 'Questions'}</span>
+        <span class="stat-value">${mcq + sa + ps}</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">✅ ${ar ? 'صحة' : 'Validity'}</span>
+        <div class="validation-bar"><div class="validation-bar-fill ${valid ? '' : 'invalid'}"></div></div>
+      </div>
+    </div>
+  `;
+  return card;
+}
+
+function openDetail(section) {
+  const lang = section.language || currentLang;
+  const ar = lang === 'ar';
+  const subj = section.subject || 'general';
+  const icon = SUBJECT_ICONS[subj] || '📖';
+  const subjLabel = (SUBJECT_LABELS[subj] || SUBJECT_LABELS.general)[ar ? 'ar' : 'en'];
+
+  const objHtml = (section.learning_objectives || []).map(o => `<li>${escapeHtml(o)}</li>`).join('');
+  const termHtml = (section.key_terms || []).map(t =>
+    `<div class="term-row"><div class="term-name">${escapeHtml(t.term)}</div><div class="term-def">${escapeHtml(t.definition)}</div></div>`
+  ).join('');
+
+  const mcqHtml = (section.exam?.multiple_choice || []).map((q, i) => `
+    <div class="question">
+      <div class="q-text">${ar ? 'س' : 'Q'}${i + 1}. ${escapeHtml(q.question)}</div>
+      <div class="q-options">${(q.options || []).map(escapeHtml).join('<br>')}</div>
+      <div class="q-answer">${ar ? 'الإجابة' : 'Answer'}: <strong>${escapeHtml(q.answer)}</strong> — ${escapeHtml(q.explanation || '')}</div>
+    </div>`).join('');
+
+  const saHtml = (section.exam?.short_answer || []).map((q, i) => `
+    <div class="question">
+      <div class="q-text">${i + 1}. ${escapeHtml(q.question)}</div>
+      <div class="q-answer">${escapeHtml(q.answer)}</div>
+    </div>`).join('');
+
+  const psHtml = (section.exam?.problem_solving || []).map((q, i) => `
+    <div class="question">
+      <div class="q-text">${ar ? 'مسألة' : 'Problem'} ${i + 1}: ${escapeHtml(q.problem)}</div>
+      <div class="q-answer" style="white-space:pre-wrap;">${escapeHtml(q.solution)}</div>
+    </div>`).join('');
+
+  const valNote = section.scientific_validation?.notes || '';
+
+  const content = `
+    <button class="close-btn" onclick="closeDetail()">✕</button>
+    <h2>${escapeHtml(section.title)}</h2>
+    <div class="meta-row">
+      <span>${icon} ${subjLabel}</span>
+      <span>📖 ${section.estimated_reading_minutes || 0} ${ar ? 'دقيقة' : 'min'}</span>
+      <span>#${String(section.section_number || 0).padStart(2, '0')}</span>
+    </div>
+
+    ${objHtml ? `<div class="section-block subj-${subj}"><h3>🎯 ${ar ? 'أهداف التعلم' : 'Learning Objectives'}</h3><ul>${objHtml}</ul></div>` : ''}
+
+    ${section.lesson_explanation ? `<div class="section-block subj-${subj}"><h3>📖 ${ar ? 'شرح الدرس' : 'Lesson Explanation'}</h3><p>${escapeHtml(section.lesson_explanation).replace(/\n/g, '<br>')}</p></div>` : ''}
+
+    ${termHtml ? `<div class="section-block subj-${subj}"><h3>🔑 ${ar ? 'المصطلحات الرئيسية' : 'Key Terms'}</h3>${termHtml}</div>` : ''}
+
+    ${valNote ? `<div class="section-block subj-${subj}"><h3>✅ ${ar ? 'التحقق العلمي' : 'Scientific Validation'}</h3><p>${escapeHtml(valNote)}</p></div>` : ''}
+
+    ${mcqHtml ? `<div class="section-block subj-${subj}"><h3>❓ ${ar ? 'اختيار من متعدد' : 'Multiple Choice'}</h3>${mcqHtml}</div>` : ''}
+
+    ${saHtml ? `<div class="section-block subj-${subj}"><h3>📝 ${ar ? 'إجابة قصيرة' : 'Short Answer'}</h3>${saHtml}</div>` : ''}
+
+    ${psHtml ? `<div class="section-block subj-${subj}"><h3>🧮 ${ar ? 'حل مسائل' : 'Problem Solving'}</h3>${psHtml}</div>` : ''}
+  `;
+  const modal = document.getElementById('detailModal');
+  const cont = document.getElementById('detailContent');
+  cont.innerHTML = content;
+  cont.className = 'detail-content ' + (ar ? 'rtl' : '');
+  modal.classList.add('open');
+}
+
+function closeDetail() {
+  document.getElementById('detailModal').classList.remove('open');
+}
+
+function downloadJson() { if (currentJobId) window.location.href = `/download/${currentJobId}.json`; }
+function downloadMd() { if (currentJobId) window.location.href = `/download/${currentJobId}.md`; }
+
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+}
+
+document.getElementById('folderInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') scanFolder();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeDetail();
+});
+</script>
 </body>
 </html>

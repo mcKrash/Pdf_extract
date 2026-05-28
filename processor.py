@@ -1,5 +1,7 @@
 import os
+import json
 import time
+import re
 from openai import OpenAI
 from dotenv import load_dotenv
 
@@ -17,9 +19,7 @@ REQUEST_DELAY = 2
 def count_arabic(text: str) -> int:
     return sum(
         1 for c in text
-        if '؀' <= c <= 'ۿ'
-        or 'ﭐ' <= c <= '﷿'
-        or 'ﹰ' <= c <= '﻿'
+        if '؀' <= c <= 'ۿ' or 'ﭐ' <= c <= '﷿' or 'ﹰ' <= c <= '﻿'
     )
 
 
@@ -27,189 +27,232 @@ def count_latin_letters(text: str) -> int:
     return sum(1 for c in text if c.isascii() and c.isalpha())
 
 
-def response_language_matches(response: str, expected: str) -> bool:
-    ar = count_arabic(response)
-    en = count_latin_letters(response)
-    if expected == "ar":
-        # Must have substantial Arabic AND Arabic must be ≥ 3x the Latin letters
-        # (Latin allowed only for chemical symbols like H2O, CO2)
-        return ar > 50 and ar > en * 3
-    return en > ar * 1.5
-
-
-def build_prompt(chunk: str, chunk_num: int, total: int, lang: str, strict: bool = False):
-    if lang == "ar":
-        extra = ""
-        if strict:
-            extra = (
-                "\n\n⛔ المحاولة السابقة فشلت لأنك كتبت بالإنجليزية. "
-                "هذه آخر فرصة. اكتب 100% بالعربية. ممنوع كتابة أي كلمة إنجليزية.\n"
-            )
-        system_msg = (
-            "أنت معلم خبير في المواد العلمية. مهمتك: تحليل النص العربي وإنتاج مادة دراسية شاملة بالعربية الفصحى. "
-            "اكتب بأسلوب واضح ومنسّق وجذاب. استخدم العناوين والقوائم لتسهيل القراءة. "
-            "ابذل قصارى جهدك لاستخراج أي محتوى تعليمي ممكن حتى لو كان النص فيه أخطاء أو رموز غريبة. "
-            "حاول تخمين السياق وأكمل المعلومات من معرفتك العلمية إن كانت الكلمات الرئيسية واضحة. "
-            "الاستثناء الوحيد للإنجليزية: الرموز الكيميائية والمعادلات الرياضية. "
-            "لا تكتفِ بقول 'النص غير واضح' إلا إذا كان فعلاً لا يحتوي على أي كلمات مفهومة." + extra
-        )
-        user_msg = f"""🔴 تعليمات حاسمة: إجابتك يجب أن تكون 100% باللغة العربية. أي كلمة إنجليزية = فشل. الاستثناء الوحيد: الرموز الكيميائية مثل H₂O و CO₂.
-
-النص من الكتاب (القسم {chunk_num} من {total}):
-
-{chunk}
-
----
-
-اكتب المادة الدراسية بالعربية الفصحى فقط. ابدأ مباشرة بـ "## 📚 القسم":
-
-## 📚 القسم {chunk_num}: [العنوان بالعربية من النص، أو "نص غير واضح"]
-
-### 🎯 أهداف التعلم
-- [الهدف الأول بالعربية]
-- [الهدف الثاني بالعربية]
-- (حتى 5 أهداف)
-
-### 📖 شرح الدرس
-[شرح كامل بالعربية لما جاء في النص فقط]
-
-### 🔑 المصطلحات الرئيسية
-- [المصطلح بالعربية]: [التعريف بالعربية]
-
-### ✅ التحقق العلمي
-[التحقق بالعربية من المعادلات والصيغ]
-
-### ❓ أسئلة الامتحان
-
-**اختيار من متعدد (5 أسئلة):**
-س1. [السؤال بالعربية]
-أ) ... ب) ... ج) ... د) ...
-الإجابة: [الحرف] — [السبب بالعربية]
-(كرر حتى س5)
-
-**إجابة قصيرة (3 أسئلة):**
-س6. [السؤال بالعربية]
-الإجابة: [الجواب بالعربية]
-(حتى س8)
-
-**حل مسائل (سؤالان إن وُجدت):**
-س9. [المسألة بالعربية]
-الحل: [الخطوات بالعربية]
-
-🔴 تذكير أخير: كل كلمة بالعربية. ممنوع الإنجليزية إطلاقاً عدا الرموز الكيميائية. إذا النص غير واضح اكتب "النص غير واضح" ولا تخترع شيئاً.
-"""
-    else:
-        extra = ""
-        if strict:
-            extra = "\n\nWARNING: Previous attempt was in Arabic. Write in English only."
-        system_msg = (
-            "You are an expert educator. Respond ONLY in English. "
-            "Use ONLY the provided text — do not invent." + extra
-        )
-        user_msg = f"""RAW BOOK TEXT (Section {chunk_num} of {total}):
-
-{chunk}
-
----
-
-Produce in English only:
-
-## 📚 Section {chunk_num}: [Title from text]
-
-### 🎯 Learning Objectives
-[3–5 points]
-
-### 📖 Lesson Explanation
-[Based only on the text]
-
-### 🔑 Key Terms
-[Term]: [Definition]
-
-### ✅ Scientific Validation
-[Verify formulas]
-
-### ❓ Exam Q&A
-
-**Multiple Choice (5):**
-Q1. ... A) B) C) D) Answer: [X]
-
-**Short Answer (3):**
-Q6. ... Answer: ...
-
-**Problem Solving (2 — if applicable):**
-Q9. ... Solution: ...
-"""
-
-    return system_msg, user_msg
-
-
-def _call(system_msg: str, user_msg: str) -> str:
+def _call(system_msg: str, user_msg: str, force_json: bool = True) -> str:
     time.sleep(REQUEST_DELAY)
-    response = client.chat.completions.create(
-        model=MODEL,
-        messages=[
+    kwargs = {
+        "model": MODEL,
+        "messages": [
             {"role": "system", "content": system_msg},
             {"role": "user", "content": user_msg},
         ],
-        max_tokens=2048,
-        temperature=0.2,
-    )
+        "max_tokens": 3000,
+        "temperature": 0.2,
+    }
+    if force_json:
+        kwargs["response_format"] = {"type": "json_object"}
+    response = client.chat.completions.create(**kwargs)
     text = response.choices[0].message.content or ""
     if not text.strip():
         raise Exception("Empty response from model")
     return text
 
 
-def translate_to_arabic(english_text: str) -> str:
-    """Force-translate any English content to clean polished Arabic."""
+def detect_subject(text: str) -> str:
+    """Quick keyword-based subject hint."""
+    t = text.lower()
+    chem_kw = ["chemistry", "كيمياء", "ch3", "ch₃", "h2o", "mole", "atom", "molecule", "جزيء", "ذرة", "تفاعل"]
+    phys_kw = ["physics", "فيزياء", "force", "energy", "newton", "velocity", "قوة", "طاقة", "سرعة"]
+    math_kw = ["math", "رياضيات", "equation", "integral", "derivative", "معادلة", "تكامل", "مشتقة", "هندسة"]
+    bio_kw = ["biology", "أحياء", "بيولوجيا", "cell", "خلية", "dna", "evolution", "تطور"]
+    counts = {
+        "chemistry": sum(1 for k in chem_kw if k in t),
+        "physics": sum(1 for k in phys_kw if k in t),
+        "math": sum(1 for k in math_kw if k in t),
+        "biology": sum(1 for k in bio_kw if k in t),
+    }
+    best = max(counts.items(), key=lambda x: x[1])
+    return best[0] if best[1] > 0 else "general"
+
+
+JSON_SCHEMA_AR = """قم بإرجاع كائن JSON بهذه البنية بالضبط (كل الحقول النصية بالعربية الفصحى):
+
+{
+  "title": "عنوان الدرس من النص",
+  "subject": "chemistry | physics | math | biology | general",
+  "estimated_reading_minutes": رقم تقديري (3-15),
+  "learning_objectives": ["هدف 1", "هدف 2", "هدف 3"],
+  "lesson_explanation": "شرح مفصّل وواضح بالعربية",
+  "key_terms": [
+    {"term": "المصطلح بالعربية", "definition": "التعريف بالعربية"}
+  ],
+  "scientific_validation": {
+    "is_valid": true,
+    "notes": "تعليق على صحة المعادلات والصيغ بالعربية"
+  },
+  "exam": {
+    "multiple_choice": [
+      {"question": "السؤال", "options": ["أ) ...", "ب) ...", "ج) ...", "د) ..."], "answer": "ب", "explanation": "السبب بالعربية"}
+    ],
+    "short_answer": [
+      {"question": "السؤال", "answer": "الإجابة"}
+    ],
+    "problem_solving": [
+      {"problem": "المسألة", "solution": "الحل خطوة بخطوة"}
+    ]
+  }
+}
+
+قواعد:
+- اكتب كل النصوص بالعربية الفصحى (الاستثناء الوحيد: الرموز الكيميائية مثل H₂O والمعادلات الرياضية).
+- 5 أسئلة اختيار من متعدد، 3 إجابة قصيرة، 0-2 حل مسائل (فقط إن وُجدت في النص).
+- استخدم محتوى النص فقط، لا تخترع.
+- إذا النص غير واضح، أعد JSON بـ title="نص غير قابل للتحليل" و learning_objectives=[] والباقي قصير.
+"""
+
+JSON_SCHEMA_EN = """Return a JSON object with EXACTLY this structure (all text fields in English):
+
+{
+  "title": "Lesson title from the text",
+  "subject": "chemistry | physics | math | biology | general",
+  "estimated_reading_minutes": estimated number (3-15),
+  "learning_objectives": ["objective 1", "objective 2", "objective 3"],
+  "lesson_explanation": "Detailed clear explanation",
+  "key_terms": [
+    {"term": "Term", "definition": "Definition"}
+  ],
+  "scientific_validation": {
+    "is_valid": true,
+    "notes": "Notes on formula/equation correctness"
+  },
+  "exam": {
+    "multiple_choice": [
+      {"question": "Question?", "options": ["A) ...", "B) ...", "C) ...", "D) ..."], "answer": "B", "explanation": "Why this is correct"}
+    ],
+    "short_answer": [
+      {"question": "Question?", "answer": "Answer"}
+    ],
+    "problem_solving": [
+      {"problem": "Problem", "solution": "Step-by-step solution"}
+    ]
+  }
+}
+
+Rules:
+- All text in English (exception: chemical symbols, math formulas).
+- 5 multiple choice, 3 short answer, 0-2 problem solving (only if present in text).
+- Use ONLY content from the text. Do not invent.
+- If text is unclear, return title="Text not analyzable" and minimal content.
+"""
+
+
+def build_messages(chunk: str, lang: str, strict: bool = False):
+    if lang == "ar":
+        system = (
+            "أنت معلم خبير في المواد العلمية، تحلل النصوص العربية وتنتج مادة دراسية منظمة. "
+            "أعد فقط JSON صالح بدون أي نص خارجه. "
+            "كل القيم النصية يجب أن تكون بالعربية الفصحى (الاستثناء: الرموز الكيميائية والرياضية)."
+            + ("\n⛔ المحاولة السابقة احتوت إنجليزية. اكتب كل القيم النصية بالعربية فقط." if strict else "")
+        )
+        user = f"النص من الكتاب:\n\n{chunk}\n\n---\n\n{JSON_SCHEMA_AR}"
+    else:
+        system = (
+            "You are an expert science educator. Analyze the text and produce structured study material. "
+            "Return ONLY valid JSON, nothing else. All text values must be in English."
+            + ("\nWARNING: Previous attempt was in Arabic. Use English only." if strict else "")
+        )
+        user = f"BOOK TEXT:\n\n{chunk}\n\n---\n\n{JSON_SCHEMA_EN}"
+
+    return system, user
+
+
+def parse_json(raw: str) -> dict | None:
+    """Best-effort JSON extraction from model output."""
+    try:
+        return json.loads(raw)
+    except Exception:
+        pass
+    # Try to find a JSON block within the text
+    match = re.search(r'\{.*\}', raw, re.DOTALL)
+    if match:
+        try:
+            return json.loads(match.group(0))
+        except Exception:
+            return None
+    return None
+
+
+def language_ok(obj: dict, lang: str) -> bool:
+    """Check that the JSON object's text content is in the expected language."""
+    flat = json.dumps(obj, ensure_ascii=False)
+    ar = count_arabic(flat)
+    en = count_latin_letters(flat)
+    if lang == "ar":
+        return ar > 50 and ar > en * 2
+    return en > ar
+
+
+def translate_obj_to_arabic(obj: dict) -> dict | None:
+    raw = json.dumps(obj, ensure_ascii=False)
     system = (
-        "أنت مترجم أكاديمي محترف ومحرر لغوي. "
-        "مهمتك: ترجمة وتنقيح النص التالي إلى العربية الفصحى المعاصرة بأسلوب جذاب ومنسّق. "
-        "قواعد صارمة:\n"
-        "1. كل كلمة بالعربية الفصحى، لا تترك أي كلمة إنجليزية.\n"
-        "2. احتفظ بالتنسيق Markdown (العناوين ## و ### والقوائم والجداول).\n"
-        "3. اجعل الأسلوب أكاديمياً واضحاً، تجنب الترجمة الحرفية الجافة.\n"
-        "4. الاستثناءات المسموحة فقط: الرموز الكيميائية مثل H₂O و CO₂ والمعادلات الرياضية.\n"
-        "5. أعد صياغة الجمل لتكون أكثر سلاسة وفصاحة عند الترجمة.\n"
-        "6. لا تضف أي ملاحظات أو تعليقات خارج المحتوى.\n"
-        "7. حافظ على نفس البنية: العنوان، الأهداف، الشرح، المصطلحات، التحقق، الأسئلة."
+        "أنت مترجم أكاديمي. ترجم كل القيم النصية في JSON التالي إلى عربية فصحى منسّقة. "
+        "حافظ على بنية JSON تماماً. لا تترجم المفاتيح. لا تغيّر القيم البولية أو الأرقام. "
+        "اترك فقط الرموز الكيميائية والمعادلات الرياضية بالإنجليزية. "
+        "أعد فقط JSON صالح."
     )
-    user = f"ترجم النص التالي إلى عربية فصحى منسّقة وجذابة:\n\n{english_text}"
-    return _call(system, user)
+    user = f"ترجم القيم النصية فقط:\n\n{raw}"
+    try:
+        result = _call(system, user)
+        return parse_json(result)
+    except Exception:
+        return None
 
 
-def process_chunk(chunk: str, chunk_num: int, total: int, lang: str = "en") -> str:
-    system_msg, user_msg = build_prompt(chunk, chunk_num, total, lang, strict=False)
+def process_chunk(chunk: str, chunk_num: int, total: int, lang: str = "en") -> dict:
+    """Returns a structured dict (JSON object) ready for DB storage."""
+    system, user = build_messages(chunk, lang, strict=False)
 
     try:
-        text = _call(system_msg, user_msg)
+        raw = _call(system, user)
     except Exception as e:
         err = str(e)
         if "429" in err or "rate_limit" in err.lower():
             time.sleep(10)
-            text = _call(system_msg, user_msg)
+            raw = _call(system, user)
         else:
             raise Exception(f"Cerebras error on section {chunk_num}: {err}")
 
-    # If language matches, we're done
-    if response_language_matches(text, lang):
-        return text
+    obj = parse_json(raw)
 
-    # SAFETY NET for Arabic books: force-translate the wrong-language response
+    if obj and language_ok(obj, lang):
+        obj["section_number"] = chunk_num
+        obj["language"] = lang
+        if "subject" not in obj or obj.get("subject") == "general":
+            obj["subject"] = detect_subject(chunk)
+        return obj
+
+    # Safety net: translate to Arabic if needed
+    if lang == "ar" and obj:
+        translated = translate_obj_to_arabic(obj)
+        if translated and language_ok(translated, "ar"):
+            translated["section_number"] = chunk_num
+            translated["language"] = "ar"
+            if "subject" not in translated or translated.get("subject") == "general":
+                translated["subject"] = detect_subject(chunk)
+            return translated
+
+    # Last-resort fallback (guaranteed correct-language placeholder)
     if lang == "ar":
-        try:
-            translated = translate_to_arabic(text)
-            if count_arabic(translated) > 50:
-                return translated
-        except Exception:
-            pass
-        # Last resort — guaranteed Arabic-only fallback
-        return (
-            f"## 📚 القسم {chunk_num}: نص غير قابل للتحليل\n\n"
-            "### ⚠️ ملاحظة\n"
-            "تعذّر استخراج محتوى تعليمي واضح من هذا القسم. "
-            "قد يكون النص الأصلي غير مقروء أو مشوشاً في ملف الـ PDF. "
-            "يُرجى مراجعة الصفحات الأصلية في الكتاب.\n"
-        )
-
-    return text
+        return {
+            "section_number": chunk_num,
+            "language": "ar",
+            "title": "نص غير قابل للتحليل",
+            "subject": detect_subject(chunk),
+            "estimated_reading_minutes": 0,
+            "learning_objectives": [],
+            "lesson_explanation": "تعذّر استخراج محتوى تعليمي واضح من هذا القسم. قد يكون النص الأصلي مشوّشاً.",
+            "key_terms": [],
+            "scientific_validation": {"is_valid": False, "notes": ""},
+            "exam": {"multiple_choice": [], "short_answer": [], "problem_solving": []},
+        }
+    return {
+        "section_number": chunk_num,
+        "language": "en",
+        "title": "Text not analyzable",
+        "subject": detect_subject(chunk),
+        "estimated_reading_minutes": 0,
+        "learning_objectives": [],
+        "lesson_explanation": "Could not extract a clear lesson from this section.",
+        "key_terms": [],
+        "scientific_validation": {"is_valid": False, "notes": ""},
+        "exam": {"multiple_choice": [], "short_answer": [], "problem_solving": []},
+    }
