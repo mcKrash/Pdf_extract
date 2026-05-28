@@ -1,158 +1,133 @@
-# 📚 PDF Scholar
+# PDF Scholar — Table of Contents Extractor
 
-Turn any PDF textbook into structured, exam-ready study material with AI — full lessons, key terms, scientific validation, and exam Q&A. Outputs both human-readable Markdown and DB-ready JSON.
+A Python service that reads a book's **Table of Contents** and returns a clean
+hierarchy of **chapters → lessons**, each with its **start/end page**.
 
-## ✨ Features
+It works in **English and Arabic**, and it is built so the AI model **cannot
+rewrite your book** — it may only fix obvious spelling/OCR typos. Every title is
+verified against the original text.
 
-### 🎯 Smart Content Extraction
-- 📄 **PDF text extraction** with Arabic Presentation Forms normalization (handles legacy PDF encoding)
-- 🧹 **Auto-skips intro pages** — finds first `Chapter 1` / `الفصل الأول` / `Unit 1` and starts there
-- 🚫 **Filters junk pages** — covers, copyright, ISBN, table of contents
-- 🔍 **Quality filter** — drops chunks with insufficient real text
+## How it works
 
-### 🧠 AI-Generated Study Material
-Each section produces a complete structured lesson:
-- 🎯 **Learning Objectives** — 3 to 5 specific outcomes
-- 📖 **Full Lesson Explanation** — detailed, exam-grade content
-- 🔑 **Key Terms & Definitions** — dictionary-style entries
-- ✅ **Scientific Validation** — formula/equation correctness check
-- ❓ **Exam Q&A** — 5 multiple choice, 3 short answer, 1–2 problem-solving
+```
+PDF + TOC page range
+        │
+        ▼
+1. Render TOC pages → images            (PyMuPDF)
+        │
+        ▼
+2. OCR each image → verbatim text       (PaddleOCR, local — pluggable)
+        │
+        ▼
+3. Structure into chapters/lessons      (Cerebras gpt-oss-120b)
+   + page ranges, EN/AR
+   ❗ forbidden to edit — spelling only
+        │
+        ▼
+4. Guard: verify every title exists      (fuzzy match vs. source)
+   in the OCR text → title_verified + warnings
+        │
+        ▼
+   JSON response
+```
 
-### 🌍 Bilingual & Reliable
-- Arabic & English support (auto-detect or force language)
-- **3-layer language guarantee** — strict prompt → translation pass → fallback
-- **2-attempt content guarantee** — if model gives up, retry with keyword-forced prompt
-- Result: every section produces real, usable exam content (no "text not analyzable" outputs)
+**Why images instead of raw PDF text?** Raw text extraction is unreliable for
+Arabic (reversed letters, broken ligatures) and impossible for scanned books.
+Rendering to an image + OCR gives uniform, layout-aware reading. The OCR step is
+the only part that "reads"; the AI only *organizes* what was read.
 
-### 🎨 Card Grid UI
-- Subject-themed cards (chemistry 🧪 green · physics 🔬 blue · math 📐 amber · biology 🧬 pink)
-- Stats per card: objectives count, terms count, total questions, validity bar
-- Click any card → full-screen modal with the complete lesson
-- **RTL layout** auto-switches for Arabic content
-- Glass-morphism dark theme
-
-### 💾 Two Output Formats
-- **JSON** — DB-ready rows for integration into a learning app
-- **Markdown** — clean human-readable study notes
-
-## 🚀 Quick Start
-
-### 1. Install dependencies
+## Setup
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 2. Add your Cerebras API key
+`.env`:
 
-Create a `.env` file:
-
-```bash
-CEREBRAS_API_KEY=your_cerebras_key_here
+```ini
+CEREBRAS_API_KEY=...        # required (structuring step)
+CEREBRAS_MODEL=gpt-oss-120b
+OCR_BACKEND=paddle          # paddle | easyocr | gemini | openai
+RENDER_DPI=200
+# GEMINI_API_KEY=...        # only if OCR_BACKEND=gemini
+# OPENAI_API_KEY=...        # only if OCR_BACKEND=openai
 ```
 
-Get a free key at [cloud.cerebras.ai](https://cloud.cerebras.ai) — 1M tokens/day free.
+### OCR backends
 
-### 3. Run
+| `OCR_BACKEND` | Type | API key | Notes |
+|---------------|------|---------|-------|
+| `easyocr` *(default on Windows)* | local | none | `pip install easyocr`. Reliable on Windows CPU. Weaker on page-number digits. |
+| `paddle` | local | none | ⚠️ **Broken on Windows** — paddlepaddle 3.3.1 oneDNN/PIR executor crashes on real-sized pages (`ConvertPirAttribute2RuntimeAttribute`). Avoid here. |
+| `gemini` | cloud | `GEMINI_API_KEY` | Most accurate on page numbers / Arabic; free tier available. Best if local OCR drops page numbers. |
+| `openai` | cloud | `OPENAI_API_KEY` | GPT-4o vision |
+
+> **Page-number accuracy:** local OCR (easyocr) reads titles well but can miss
+> the page number on dotted-leader lines. If your output has `null` page
+> numbers, switch to `OCR_BACKEND=gemini` for the most reliable digits.
+
+> **Note:** Cerebras models are text-only and **cannot read images**, so the OCR
+> step always runs on one of the backends above. Cerebras only does step 3.
+
+## Run
 
 ```bash
-python main.py
+uvicorn main:app --reload
 ```
 
-Open `http://localhost:8000` in your browser.
+## API
 
-## 🧭 Usage
+### `POST /extract-toc`
 
-1. **Enter folder path** containing your PDF books (e.g., `C:\Books`)
-2. Click **Scan Folder** — finds all PDFs in that folder
-3. **Select PDF** from the dropdown
-4. Choose **Output Language** (Auto / Arabic / English)
-5. Choose **Pages to Process** (default 30)
-6. Click **✨ Generate Study Material**
-7. Watch sections appear live as they're processed
-8. **Click any card** to see the full lesson
-9. **Download JSON or Markdown** when done
+Form fields:
 
-## 📦 JSON Schema (per section)
+| Field | Required | Description |
+|-------|----------|-------------|
+| `file` | one of | The PDF, uploaded as multipart |
+| `pdf_path` | one of | …or a path to a PDF already on the server |
+| `toc_start_page` | yes | First TOC page (1-based, inclusive) |
+| `toc_end_page` | yes | Last TOC page (1-based, inclusive) |
+| `lang` | no | `en` (default) or `ar` |
+
+Example:
+
+```bash
+curl -X POST http://localhost:8000/extract-toc \
+  -F "file=@book.pdf" \
+  -F "toc_start_page=3" \
+  -F "toc_end_page=5" \
+  -F "lang=ar"
+```
+
+Response:
 
 ```json
 {
-  "section_number": 1,
   "language": "ar",
-  "title": "هاليدات الألكيل",
-  "subject": "chemistry",
-  "estimated_reading_minutes": 8,
-  "learning_objectives": [
-    "التعرف على الصيغة العامة لهاليدات الألكيل",
-    "تمييز الأنواع الثلاثة (أولي، ثانوي، ثالثي)"
+  "toc_start_page": 3,
+  "toc_end_page": 5,
+  "source_transcription": "…full OCR text of the TOC pages…",
+  "chapters": [
+    {
+      "title": "الفصل الأول: المادة وخصائصها",
+      "start_page": 12,
+      "end_page": 45,
+      "title_verified": true,
+      "lessons": [
+        { "title": "الدرس الأول: حالات المادة", "start_page": 12, "end_page": 18, "title_verified": true },
+        { "title": "الدرس الثاني: التغيرات الفيزيائية", "start_page": 19, "end_page": 45, "title_verified": true }
+      ]
+    }
   ],
-  "lesson_explanation": "هاليدات الألكيل هي مركبات عضوية...",
-  "key_terms": [
-    { "term": "هاليد ألكيل", "definition": "مركب عضوي..." }
-  ],
-  "scientific_validation": {
-    "is_valid": true,
-    "notes": "الصيغة العامة CₙH₂ₙ₊₁X صحيحة لجميع هاليدات الألكيل"
-  },
-  "exam": {
-    "multiple_choice": [
-      {
-        "question": "أي من المركبات التالية هاليد ألكيل أولي؟",
-        "options": ["أ) CH₃CH₂Br", "ب) ...", "ج) ...", "د) ..."],
-        "answer": "أ",
-        "explanation": "ذرة البروم مرتبطة بذرة كربون أولية"
-      }
-    ],
-    "short_answer": [
-      { "question": "...", "answer": "..." }
-    ],
-    "problem_solving": [
-      { "problem": "...", "solution": "..." }
-    ]
-  }
+  "warnings": []
 }
 ```
 
-The top-level JSON also contains `book_filename`, `language`, `total_sections`, and `sections[]`.
+- `title_verified: false` and a matching entry in `warnings` mean the AI returned
+  a title that does not appear in the source — i.e. it may have altered content.
+  Treat those entries with suspicion.
+- Missing `end_page` values are derived from the next item's `start_page`.
 
-## 🏗️ Architecture
+### `GET /health`
 
-```
-pdf-scholar/
-├── main.py              # FastAPI server + job orchestration
-├── extractor.py         # PyMuPDF text extraction + intro-skip + quality filter
-├── processor.py         # Cerebras AI calls + JSON enforcement + content guarantee
-├── templates/
-│   └── index.html       # Card-grid UI with subject theming
-├── output/              # Generated .json and .md files
-└── requirements.txt
-```
-
-## ⚙️ Tech Stack
-
-- **Backend**: Python 3.10+ · FastAPI · Uvicorn
-- **PDF Extraction**: PyMuPDF (fitz) with NFKC normalization
-- **AI Inference**: Cerebras Cloud API (`gpt-oss-120b`) — 1,800 tokens/sec
-- **Frontend**: Vanilla HTML + JavaScript (no framework, dark mode)
-
-## 🛡️ Guarantees
-
-| Concern | How it's handled |
-|---------|-----------------|
-| English in Arabic books | Strict prompt → retry → auto-translation → forced fallback |
-| Garbled OCR text | Keyword extraction + domain-knowledge generation |
-| Empty/refused sections | "Empty response" detector triggers forced 2nd attempt |
-| Intro/cover pages | Auto-skip until first chapter marker |
-| TOC / copyright pages | Pattern-based skip filter |
-
-## 📊 Performance
-
-| Operation | Speed |
-|-----------|-------|
-| PDF extraction | ~5 seconds for 100 pages |
-| AI processing | ~2–3 seconds per section |
-| 30-page book end-to-end | ~1–2 minutes |
-
-## 📜 License
-
-MIT
+Returns the active OCR backend and Cerebras model.

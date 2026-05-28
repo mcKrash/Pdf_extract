@@ -1,6 +1,14 @@
 fastapi
 uvicorn
 python-multipart
+python-dotenv
 openai
 pymupdf
-python-dotenv
+pillow
+numpy
+# --- OCR backends (install the one you use) ---
+# default backend: PaddleOCR (local, no API key)
+paddleocr
+paddlepaddle
+# optional alternative local backend:
+# easyocr
