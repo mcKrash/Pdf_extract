@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PDF Scholar</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+    }
+
+    h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #7c83fd;
+      margin-bottom: 6px;
+    }
+
+    .subtitle {
+      color: #64748b;
+      margin-bottom: 40px;
+      font-size: 0.95rem;
+    }
+
+    .card {
+      background: #1e2130;
+      border: 1px solid #2d3148;
+      border-radius: 14px;
+      padding: 32px;
+      width: 100%;
+      max-width: 680px;
+    }
+
+    label {
+      display: block;
+      font-size: 0.85rem;
+      color: #94a3b8;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      background: #0f1117;
+      border: 1px solid #2d3148;
+      border-radius: 8px;
+      padding: 12px 16px;
+      color: #e2e8f0;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border 0.2s;
+    }
+
+    input[type="text"]:focus {
+      border-color: #7c83fd;
+    }
+
+    .row {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    button {
+      padding: 12px 24px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-size: 0.95rem;
+      font-weight: 600;
+      transition: opacity 0.2s;
+    }
+
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    #scanBtn {
+      background: #2d3148;
+      color: #e2e8f0;
+    }
+
+    #generateBtn {
+      background: #7c83fd;
+      color: #fff;
+      flex: 1;
+    }
+
+    #pdfSelect {
+      width: 100%;
+      margin-top: 16px;
+      background: #0f1117;
+      border: 1px solid #2d3148;
+      border-radius: 8px;
+      padding: 12px 16px;
+      color: #e2e8f0;
+      font-size: 0.9rem;
+      outline: none;
+      display: none;
+    }
+
+    #errorMsg {
+      color: #f87171;
+      font-size: 0.88rem;
+      margin-top: 10px;
+      display: none;
+    }
+
+    /* Progress */
+    #progressSection {
+      margin-top: 28px;
+      display: none;
+    }
+
+    .progress-label {
+      font-size: 0.88rem;
+      color: #94a3b8;
+      margin-bottom: 8px;
+    }
+
+    .progress-bar-wrap {
+      background: #0f1117;
+      border-radius: 999px;
+      height: 8px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #7c83fd, #a78bfa);
+      border-radius: 999px;
+      width: 0%;
+      transition: width 0.4s ease;
+    }
+
+    /* Results */
+    #resultsSection {
+      margin-top: 32px;
+      display: none;
+    }
+
+    .results-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .results-header h2 {
+      font-size: 1.1rem;
+      color: #7c83fd;
+    }
+
+    #downloadBtn {
+      background: #22c55e22;
+      color: #22c55e;
+      border: 1px solid #22c55e44;
+      font-size: 0.85rem;
+      padding: 8px 16px;
+    }
+
+    .section-card {
+      background: #0f1117;
+      border: 1px solid #2d3148;
+      border-radius: 10px;
+      margin-bottom: 12px;
+      overflow: hidden;
+    }
+
+    .section-header {
+      padding: 14px 18px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #c4c9ff;
+      user-select: none;
+    }
+
+    .section-header:hover { background: #1a1e2e; }
+
+    .section-body {
+      padding: 0 18px;
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease, padding 0.3s;
+    }
+
+    .section-body.open {
+      max-height: 4000px;
+      padding: 16px 18px;
+    }
+
+    .section-body pre {
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: inherit;
+      font-size: 0.9rem;
+      line-height: 1.7;
+      color: #cbd5e1;
+    }
+
+    .chevron { transition: transform 0.3s; font-size: 0.8rem; }
+    .open-chevron { transform: rotate(180deg); }
+  </style>
+</head>
+<body>
+
+  <h1>📚 PDF Scholar</h1>
+  <p class="subtitle">AI-powered lesson extraction & exam prep — fully local</p>
+
+  <div class="card">
+    <label>Book Folder Path</label>
+    <input type="text" id="folderInput" placeholder="e.g.  C:\Users\ms_10\Documents\Books" />
+
+    <div class="row">
+      <button id="scanBtn" onclick="scanFolder()">Scan Folder</button>
+    </div>
+
+    <select id="pdfSelect" size="1"></select>
+    <div id="errorMsg"></div>
+
+    <div style="display:flex; gap:12px; margin-top:18px;">
+      <div style="flex:1;">
+        <label style="margin-bottom:6px;">Output Language</label>
+        <select id="langSelect" style="width:100%; background:#0f1117; border:1px solid #2d3148; border-radius:8px; padding:10px; color:#e2e8f0;">
+          <option value="auto">Auto-detect</option>
+          <option value="ar">Arabic / العربية</option>
+          <option value="en">English</option>
+        </select>
+      </div>
+      <div style="flex:1;">
+        <label style="margin-bottom:6px;">Pages to Process</label>
+        <input type="number" id="pagesInput" value="30" min="1" max="2000"
+               style="width:100%; background:#0f1117; border:1px solid #2d3148; border-radius:8px; padding:10px; color:#e2e8f0;" />
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:20px;">
+      <button id="generateBtn" onclick="startGenerate()" disabled>Generate Study Material</button>
+    </div>
+  </div>
+
+  <!-- Progress -->
+  <div class="card" id="progressSection">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+      <div class="progress-label" id="progressLabel">Initializing...</div>
+      <div id="progressPct" style="font-size:1.1rem; font-weight:700; color:#7c83fd;">0%</div>
+    </div>
+    <div class="progress-bar-wrap">
+      <div class="progress-bar-fill" id="progressFill"></div>
+    </div>
+    <div id="progressSections" style="margin-top:8px; font-size:0.82rem; color:#64748b;"></div>
+  </div>
+
+  <!-- Results -->
+  <div class="card" id="resultsSection">
+    <div class="results-header">
+      <h2>Study Material</h2>
+      <button id="downloadBtn" onclick="downloadResults()">⬇ Download .md</button>
+    </div>
+    <div id="resultsList"></div>
+  </div>
+
+  <script>
+    let currentJobId = null;
+    let pollInterval = null;
+
+    function showError(msg) {
+      const el = document.getElementById('errorMsg');
+      el.textContent = msg;
+      el.style.display = msg ? 'block' : 'none';
+    }
+
+    async function scanFolder() {
+      showError('');
+      const folder = document.getElementById('folderInput').value.trim();
+      if (!folder) return showError('Please enter a folder path.');
+
+      const btn = document.getElementById('scanBtn');
+      btn.disabled = true;
+      btn.textContent = 'Scanning...';
+
+      try {
+        const fd = new FormData();
+        fd.append('folder', folder);
+        const res = await fetch('/scan', { method: 'POST', body: fd });
+        const data = await res.json();
+
+        if (data.error) { showError(data.error); return; }
+
+        const sel = document.getElementById('pdfSelect');
+        sel.innerHTML = '';
+        data.pdfs.forEach(p => {
+          const opt = document.createElement('option');
+          opt.value = p;
+          opt.textContent = p.split(/[\\/]/).pop();
+          sel.appendChild(opt);
+        });
+        sel.style.display = 'block';
+        document.getElementById('generateBtn').disabled = false;
+
+      } catch (e) {
+        showError('Scan failed: ' + e.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Scan Folder';
+      }
+    }
+
+    async function startGenerate() {
+      showError('');
+      const sel = document.getElementById('pdfSelect');
+      const pdfPath = sel.value;
+      if (!pdfPath) return showError('No PDF selected.');
+
+      document.getElementById('generateBtn').disabled = true;
+      document.getElementById('progressSection').style.display = 'block';
+      document.getElementById('resultsSection').style.display = 'none';
+      document.getElementById('resultsList').innerHTML = '';
+      setProgress(0, 'Starting...');
+
+      try {
+        const fd = new FormData();
+        fd.append('pdf_path', pdfPath);
+        fd.append('lang', document.getElementById('langSelect').value);
+        fd.append('pages', document.getElementById('pagesInput').value || '30');
+        const res = await fetch('/generate', { method: 'POST', body: fd });
+        const data = await res.json();
+        if (data.error) { showError(data.error); return; }
+        currentJobId = data.job_id;
+        pollInterval = setInterval(pollStatus, 2000);
+      } catch (e) {
+        showError('Failed to start: ' + e.message);
+        document.getElementById('generateBtn').disabled = false;
+      }
+    }
+
+    async function pollStatus() {
+      if (!currentJobId) return;
+      try {
+        const res = await fetch(`/status/${currentJobId}`);
+        const data = await res.json();
+
+        setProgress(data.progress || 0, data.current || data.status, data.done_sections || 0, data.total_sections || 0);
+        renderResults(data.results || []);
+
+        if (data.status === 'done') {
+          clearInterval(pollInterval);
+          document.getElementById('resultsSection').style.display = 'block';
+          document.getElementById('generateBtn').disabled = false;
+        } else if (data.status === 'error') {
+          clearInterval(pollInterval);
+          showError('Error: ' + data.error);
+          document.getElementById('generateBtn').disabled = false;
+        }
+      } catch (e) { /* network blip, keep polling */ }
+    }
+
+    function setProgress(pct, label, done, total) {
+      document.getElementById('progressFill').style.width = pct + '%';
+      document.getElementById('progressLabel').textContent = label;
+      document.getElementById('progressPct').textContent = pct + '%';
+      if (total > 0) {
+        document.getElementById('progressSections').textContent =
+          `Sections completed: ${done} / ${total}`;
+      }
+    }
+
+    function renderResults(results) {
+      const list = document.getElementById('resultsList');
+      // Only add new sections
+      while (list.children.length < results.length) {
+        const idx = list.children.length;
+        const card = document.createElement('div');
+        card.className = 'section-card';
+
+        const header = document.createElement('div');
+        header.className = 'section-header';
+        header.innerHTML = `Section ${idx + 1} <span class="chevron">▼</span>`;
+        header.onclick = () => {
+          body.classList.toggle('open');
+          header.querySelector('.chevron').classList.toggle('open-chevron');
+        };
+
+        const body = document.createElement('div');
+        body.className = 'section-body';
+        const pre = document.createElement('pre');
+        pre.textContent = results[idx];
+        body.appendChild(pre);
+
+        card.appendChild(header);
+        card.appendChild(body);
+        list.appendChild(card);
+
+        if (idx === 0) {
+          body.classList.add('open');
+          header.querySelector('.chevron').classList.add('open-chevron');
+        }
+      }
+
+      if (results.length > 0) {
+        document.getElementById('resultsSection').style.display = 'block';
+      }
+    }
+
+    function downloadResults() {
+      if (currentJobId) window.location.href = `/download/${currentJobId}`;
+    }
+
+    // Allow Enter key on folder input
+    document.getElementById('folderInput').addEventListener('keydown', e => {
+      if (e.key === 'Enter') scanFolder();
+    });
+  </script>
+</body>
+</html>
