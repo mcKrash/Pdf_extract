@@ -23,6 +23,7 @@ from fastapi.responses import JSONResponse, HTMLResponse
 from ocr import transcribe_toc
 from structure import structure_toc
 from verify import verify_titles
+from unit import extract_unit
 
 load_dotenv()
 
@@ -101,6 +102,54 @@ async def extract_toc(
         return JSONResponse({"error": str(e)}, status_code=400)
     except Exception as e:
         return JSONResponse({"error": f"Extraction failed: {e}"}, status_code=500)
+    finally:
+        if tmp_path and tmp_path.exists():
+            tmp_path.unlink(missing_ok=True)
+
+
+@app.post("/extract-unit")
+async def extract_unit_endpoint(
+    file: UploadFile | None = File(default=None),
+    pdf_path: str = Form(default=""),
+    pdf_start_page: int = Form(...),
+    pdf_end_page: int = Form(...),
+    lang: str = Form("ar"),
+    question_types: str = Form("mcq,short,essay,problem"),
+    questions_per_lesson: int = Form(6),
+):
+    """Extract a full unit: lessons + verbatim content + generated questions.
+
+    Give the unit's range as PDF page numbers (what you see in the PDF viewer).
+    `question_types`: comma-separated from mcq,short,essay,problem.
+    """
+    lang = (lang or "ar").lower()
+    if lang not in ("en", "ar"):
+        return JSONResponse({"error": "lang must be 'en' or 'ar'."}, status_code=400)
+    q_types = [t.strip().lower() for t in question_types.split(",") if t.strip()]
+
+    tmp_path: Path | None = None
+    try:
+        if file is not None:
+            tmp_path = UPLOAD_DIR / f"{uuid.uuid4().hex}.pdf"
+            with open(tmp_path, "wb") as out:
+                shutil.copyfileobj(file.file, out)
+            target = str(tmp_path)
+        elif pdf_path.strip():
+            target = pdf_path.strip().strip('"').strip("'")
+            if not Path(target).exists():
+                return JSONResponse({"error": f"PDF not found: {target}"}, status_code=400)
+        else:
+            return JSONResponse({"error": "Provide either an uploaded 'file' or a 'pdf_path'."},
+                                status_code=400)
+
+        result = await asyncio.to_thread(
+            extract_unit, target, pdf_start_page, pdf_end_page, lang, q_types, questions_per_lesson
+        )
+        return result
+    except ValueError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    except Exception as e:
+        return JSONResponse({"error": f"Unit extraction failed: {e}"}, status_code=500)
     finally:
         if tmp_path and tmp_path.exists():
             tmp_path.unlink(missing_ok=True)

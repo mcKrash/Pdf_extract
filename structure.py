@@ -41,7 +41,14 @@ ABSOLUTE RULES — read carefully:
    for an item is genuinely absent from the source, use null.
 5. A "lesson" is an entry nested under a chapter. If the book has no sub-entries under a
    heading, that chapter simply has an empty "lessons" list.
-6. Output ONLY a single valid JSON object. No markdown, no commentary."""
+6. Output ONLY a single valid JSON object. No markdown, no commentary.
+7. SCIENTIFIC NOTATION — applies to every text field you output:
+   Any chemical formula, chemical equation, or mathematical expression MUST be written
+   as LaTeX inline math enclosed in $...$. Examples:
+     H2O → $H_2O$  |  CnH2n+1 → $C_nH_{2n+1}$  |  CH3-CH2-OH → $CH_3-CH_2-OH$
+     2H2 + O2 → 2H2O becomes $2H_2 + O_2 \\rightarrow 2H_2O$
+   Never use Unicode subscripts/superscripts (H₂O ✗). Always use LaTeX ($H_2O$ ✓).
+   Do NOT change the scientific content itself — only format it as LaTeX."""
 
 _RULES_AR = """أنت "مُنظِّم فهرس المحتويات".
 
@@ -56,7 +63,13 @@ _RULES_AR = """أنت "مُنظِّم فهرس المحتويات".
 4. أرقام الصفحات يجب أن تؤخذ من المصدر فقط. لا تخترع رقم صفحة أبداً. إذا كان رقم الصفحة
    غير موجود فعلاً في المصدر، استخدم null.
 5. "الدرس" هو عنصر يندرج تحت فصل. إذا لم يكن لعنوان فصلٍ عناصرُ فرعية، فاجعل قائمة "lessons" فارغة.
-6. أخرج كائن JSON واحداً صحيحاً فقط. بدون أي تنسيق markdown أو تعليقات."""
+6. أخرج كائن JSON واحداً صحيحاً فقط. بدون أي تنسيق markdown أو تعليقات.
+7. الصيغ العلمية — تُطبَّق على كل حقل نصي في مخرجاتك:
+   أي صيغة كيميائية أو معادلة كيميائية أو تعبير رياضي يجب كتابته كـ LaTeX inline داخل $...$. أمثلة:
+     H2O ← $H_2O$  |  CnH2n+1 ← $C_nH_{2n+1}$  |  CH3-CH2-OH ← $CH_3-CH_2-OH$
+     2H2 + O2 → 2H2O تصبح $2H_2 + O_2 \\rightarrow 2H_2O$
+   ممنوع استخدام Unicode للأرقام المرتفعة أو المنخفضة (H₂O ✗). استخدم دائماً LaTeX ($H_2O$ ✓).
+   لا تُغيِّر المحتوى العلمي نفسه — فقط نسّقه بـ LaTeX."""
 
 _SCHEMA = """Return JSON with EXACTLY this shape:
 

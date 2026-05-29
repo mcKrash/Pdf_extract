@@ -3,158 +3,165 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PDF Scholar — TOC Extractor</title>
+  <title>PDF Scholar — TOC & Unit Extractor</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: 'Segoe UI', 'Tajawal', sans-serif;
       background: radial-gradient(ellipse at top, #1a1d2e 0%, #0a0c14 60%);
-      color: #e2e8f0; min-height: 100vh; padding: 32px 20px;
+      color: #e2e8f0; min-height: 100vh; padding: 28px 18px;
     }
-    .container { max-width: 860px; margin: 0 auto; }
-    .header { text-align: center; margin-bottom: 28px; }
+    .container { max-width: 920px; margin: 0 auto; }
+    .header { text-align: center; margin-bottom: 22px; }
     h1 {
-      font-size: 2rem;
+      font-size: 1.9rem;
       background: linear-gradient(135deg, #7c83fd 0%, #c084fc 100%);
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-      background-clip: text; margin-bottom: 6px;
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
     }
-    .subtitle { color: #64748b; font-size: 0.95rem; }
-    .card {
-      background: rgba(30,33,48,0.7); border: 1px solid #2d3148;
-      border-radius: 16px; padding: 26px; margin-bottom: 20px;
-    }
-    label {
-      display: block; font-size: 0.74rem; color: #94a3b8; margin-bottom: 6px;
-      text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600;
-    }
-    input[type="number"], select {
-      width: 100%; background: #0f1117; border: 1px solid #2d3148;
-      border-radius: 10px; padding: 11px 14px; color: #e2e8f0; font-size: 0.95rem; outline: none;
-    }
+    .subtitle { color: #64748b; font-size: 0.92rem; margin-top: 4px; }
+    .card { background: rgba(30,33,48,0.7); border: 1px solid #2d3148; border-radius: 16px; padding: 24px; margin-bottom: 18px; }
+    label { display: block; font-size: 0.72rem; color: #94a3b8; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
+    input[type="number"], select { width: 100%; background: #0f1117; border: 1px solid #2d3148; border-radius: 10px; padding: 11px 14px; color: #e2e8f0; font-size: 0.95rem; outline: none; }
     input:focus, select:focus { border-color: #7c83fd; }
 
-    /* Dropzone */
-    #dropzone {
-      border: 2px dashed #3a3f5c; border-radius: 14px; padding: 36px 20px;
-      text-align: center; cursor: pointer; transition: all 0.2s; background: #0f1117;
-    }
+    /* Mode toggle */
+    .modes { display: flex; gap: 8px; margin-bottom: 18px; }
+    .mode-btn { flex: 1; padding: 12px; border-radius: 10px; border: 1px solid #2d3148; background: #0f1117; color: #94a3b8; cursor: pointer; font-weight: 600; }
+    .mode-btn.active { background: linear-gradient(135deg, #7c83fd 0%, #a855f7 100%); color: #fff; border-color: transparent; }
+
+    #dropzone { border: 2px dashed #3a3f5c; border-radius: 14px; padding: 30px 20px; text-align: center; cursor: pointer; transition: all 0.2s; background: #0f1117; }
     #dropzone:hover, #dropzone.drag { border-color: #7c83fd; background: #141727; }
-    #dropzone .big { font-size: 2.4rem; margin-bottom: 8px; }
-    #dropzone .hint { color: #64748b; font-size: 0.85rem; margin-top: 4px; }
+    #dropzone .big { font-size: 2.2rem; margin-bottom: 6px; }
+    #dropzone .hint { color: #64748b; font-size: 0.82rem; margin-top: 4px; }
     #fileName { color: #c084fc; font-weight: 600; margin-top: 10px; word-break: break-all; }
 
-    .row { display: flex; gap: 14px; margin-top: 18px; }
-    .row > div { flex: 1; }
+    .row { display: flex; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
+    .row > div { flex: 1; min-width: 120px; }
+    .qtypes { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 8px; }
+    .qtypes label { display: flex; align-items: center; gap: 6px; text-transform: none; letter-spacing: 0; font-size: 0.9rem; color: #cbd5e1; cursor: pointer; }
+    .qtypes input { width: auto; }
 
-    button {
-      padding: 13px 24px; border-radius: 10px; border: none; cursor: pointer;
-      font-size: 1rem; font-weight: 600; transition: all 0.2s;
-    }
-    button:disabled { opacity: 0.4; cursor: not-allowed; }
-    #genBtn {
-      width: 100%; margin-top: 20px; color: #fff;
-      background: linear-gradient(135deg, #7c83fd 0%, #a855f7 100%);
-    }
-    #genBtn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(124,131,253,0.4); }
+    button.go { width: 100%; margin-top: 18px; color: #fff; padding: 13px; border-radius: 10px; border: none; cursor: pointer; font-size: 1rem; font-weight: 600; background: linear-gradient(135deg, #7c83fd 0%, #a855f7 100%); }
+    button.go:disabled { opacity: 0.4; cursor: not-allowed; }
+    #errorMsg { color: #f87171; font-size: 0.9rem; margin-top: 12px; display: none; }
 
-    #errorMsg { color: #f87171; font-size: 0.9rem; margin-top: 14px; display: none; }
-    #loading { display: none; text-align: center; padding: 30px; color: #94a3b8; }
-    .spinner {
-      width: 38px; height: 38px; border: 3px solid #2d3148; border-top-color: #c084fc;
-      border-radius: 50%; margin: 0 auto 14px; animation: spin 0.9s linear infinite;
-    }
+    #loading { display: none; text-align: center; padding: 26px; color: #94a3b8; }
+    .spinner { width: 36px; height: 36px; border: 3px solid #2d3148; border-top-color: #c084fc; border-radius: 50%; margin: 0 auto 12px; animation: spin 0.9s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* Results */
     #results { display: none; }
-    .warn-box {
-      background: rgba(245,158,11,0.1); border: 1px solid #f59e0b55; color: #fbbf24;
-      border-radius: 10px; padding: 12px 16px; margin-bottom: 18px; font-size: 0.88rem;
-    }
-    .warn-box ul { padding-left: 18px; margin-top: 6px; }
-    .chapter {
-      background: linear-gradient(135deg, rgba(30,33,48,0.95), rgba(20,22,34,0.95));
-      border: 1px solid #2d3148; border-radius: 14px; margin-bottom: 16px; overflow: hidden;
-    }
-    .chapter-head {
-      padding: 16px 20px; border-bottom: 1px solid #2d3148;
-      display: flex; align-items: center; gap: 12px;
-      background: linear-gradient(135deg, #7c83fd33 0%, transparent 100%);
-    }
-    .chapter-title { font-size: 1.05rem; font-weight: 700; color: #fff; flex: 1; }
-    .pages { font-size: 0.8rem; color: #c084fc; white-space: nowrap; background: rgba(0,0,0,0.3);
-      padding: 4px 10px; border-radius: 8px; }
-    .lesson {
-      display: flex; align-items: center; gap: 10px; padding: 11px 20px 11px 32px;
-      border-bottom: 1px solid #20232f; font-size: 0.94rem;
-    }
+    .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; }
+    .toolbar h2 { color: #c084fc; font-size: 1.2rem; }
+    .dl-btn { background: #1e2130; color: #c084fc; border: 1px solid #c084fc55; font-size: 0.85rem; padding: 8px 14px; border-radius: 8px; cursor: pointer; }
+    .warn-box { background: rgba(245,158,11,0.1); border: 1px solid #f59e0b55; color: #fbbf24; border-radius: 10px; padding: 10px 14px; margin-bottom: 16px; font-size: 0.85rem; }
+    .warn-box ul { padding-left: 18px; margin-top: 4px; }
+
+    .chapter { background: linear-gradient(135deg, rgba(30,33,48,0.95), rgba(20,22,34,0.95)); border: 1px solid #2d3148; border-radius: 14px; margin-bottom: 14px; overflow: hidden; }
+    .chapter-head { padding: 14px 18px; border-bottom: 1px solid #2d3148; display: flex; align-items: center; gap: 12px; background: linear-gradient(135deg, #7c83fd33 0%, transparent 100%); }
+    .chapter-title { font-size: 1.02rem; font-weight: 700; color: #fff; flex: 1; }
+    .pages { font-size: 0.78rem; color: #c084fc; white-space: nowrap; background: rgba(0,0,0,0.3); padding: 4px 10px; border-radius: 8px; }
+    .lesson { display: flex; align-items: center; gap: 10px; padding: 11px 18px 11px 30px; border-bottom: 1px solid #20232f; font-size: 0.93rem; }
     .lesson:last-child { border-bottom: none; }
     .lesson-title { flex: 1; color: #cbd5e1; }
-    .badge-ok, .badge-warn { font-size: 0.72rem; padding: 2px 8px; border-radius: 6px; }
+    .badge-ok, .badge-warn { font-size: 0.7rem; padding: 2px 8px; border-radius: 6px; }
     .badge-ok { background: rgba(34,197,94,0.15); color: #86efac; }
     .badge-warn { background: rgba(245,158,11,0.15); color: #fbbf24; }
-    details { margin-top: 18px; }
-    summary { cursor: pointer; color: #94a3b8; font-size: 0.88rem; }
-    pre {
-      white-space: pre-wrap; background: #0f1117; border: 1px solid #2d3148;
-      border-radius: 10px; padding: 16px; margin-top: 10px; font-size: 0.82rem; color: #94a3b8;
-      max-height: 320px; overflow: auto;
-    }
+
+    details { margin: 8px 18px; }
+    summary { cursor: pointer; color: #94a3b8; font-size: 0.85rem; padding: 4px 0; }
+    pre { white-space: pre-wrap; background: #0f1117; border: 1px solid #2d3148; border-radius: 10px; padding: 14px; margin-top: 8px; font-size: 0.8rem; color: #cbd5e1; max-height: 360px; overflow: auto; }
+    .q { background: rgba(124,131,253,0.06); border-radius: 10px; padding: 12px 14px; margin: 8px 0; }
+    .q .qt { font-size: 0.68rem; text-transform: uppercase; color: #7c83fd; font-weight: 700; }
+    .q .qq { font-weight: 600; color: #fff; margin: 4px 0; }
+    .q .opt { color: #cbd5e1; padding: 1px 0 1px 12px; }
+    .q .ans { margin-top: 6px; padding: 7px 10px; background: rgba(34,197,94,0.1); border-left: 3px solid #22c55e; border-radius: 6px; color: #86efac; font-size: 0.88rem; }
     .rtl { direction: rtl; text-align: right; }
-    .rtl .lesson { padding: 11px 32px 11px 20px; }
+    .rtl .lesson { padding: 11px 30px 11px 18px; }
+    .rtl .q .opt { padding: 1px 12px 1px 0; }
+    .rtl .q .ans { border-left: none; border-right: 3px solid #22c55e; }
   </style>
 </head>
 <body>
 <div class="container">
   <div class="header">
     <h1>📚 PDF Scholar</h1>
-    <p class="subtitle">Extract chapters &amp; lessons from a book's Table of Contents</p>
+    <p class="subtitle">Extract a book's structure — or a full unit with content & exam questions</p>
   </div>
 
   <div class="card">
+    <div class="modes">
+      <button class="mode-btn active" id="modeToc" onclick="setMode('toc')">🗂️ TOC structure</button>
+      <button class="mode-btn" id="modeUnit" onclick="setMode('unit')">📖 Full unit (content + questions)</button>
+    </div>
+
     <div id="dropzone">
       <div class="big">📄</div>
       <div>Drag &amp; drop a PDF here, or <strong>click to choose</strong></div>
-      <div class="hint">Only the table-of-contents pages are read</div>
+      <div class="hint" id="dzHint">Only the table-of-contents pages are read</div>
       <div id="fileName"></div>
     </div>
     <input type="file" id="fileInput" accept="application/pdf" style="display:none" />
 
-    <div class="row">
-      <div>
-        <label>TOC start page</label>
-        <input type="number" id="startPage" min="1" value="1" />
-      </div>
-      <div>
-        <label>TOC end page</label>
-        <input type="number" id="endPage" min="1" value="2" />
-      </div>
-      <div>
-        <label>Language</label>
-        <select id="lang">
-          <option value="en">English</option>
-          <option value="ar">العربية / Arabic</option>
-        </select>
+    <!-- TOC fields -->
+    <div id="tocFields">
+      <div class="row">
+        <div><label>TOC start page</label><input type="number" id="tocStart" min="1" value="1" /></div>
+        <div><label>TOC end page</label><input type="number" id="tocEnd" min="1" value="2" /></div>
+        <div><label>Language</label>
+          <select id="tocLang"><option value="ar">العربية / Arabic</option><option value="en">English</option></select>
+        </div>
       </div>
     </div>
 
-    <button id="genBtn" disabled>✨ Execute — Generate</button>
+    <!-- Unit fields -->
+    <div id="unitFields" style="display:none">
+      <div class="row">
+        <div><label>Unit PDF start page</label><input type="number" id="uStart" min="1" value="8" /></div>
+        <div><label>Unit PDF end page</label><input type="number" id="uEnd" min="1" value="94" /></div>
+        <div><label>Language</label>
+          <select id="uLang"><option value="ar">العربية / Arabic</option><option value="en">English</option></select>
+        </div>
+        <div><label>Questions / lesson</label><input type="number" id="uCount" min="1" max="20" value="6" /></div>
+      </div>
+      <label style="margin-top:14px">Question types</label>
+      <div class="qtypes">
+        <label><input type="checkbox" class="qtype" value="mcq" checked> MCQ (اختيار)</label>
+        <label><input type="checkbox" class="qtype" value="short" checked> Short (قصير)</label>
+        <label><input type="checkbox" class="qtype" value="essay" checked> Essay (مقالي)</label>
+        <label><input type="checkbox" class="qtype" value="problem" checked> Problem (مسائل)</label>
+      </div>
+      <div class="hint" style="color:#64748b;font-size:0.8rem;margin-top:10px">
+        Give the unit's range as the actual PDF page numbers (page offset is auto-detected). A full unit can take several minutes.
+      </div>
+    </div>
+
+    <button class="go" id="goBtn" disabled>✨ Execute</button>
     <div id="errorMsg"></div>
   </div>
 
   <div class="card" id="loading">
     <div class="spinner"></div>
-    <div id="loadingText">Reading pages &amp; extracting… (first run downloads OCR models, please wait)</div>
+    <div id="loadingText">Working…</div>
   </div>
 
   <div id="results"></div>
 </div>
 
 <script>
-let chosenFile = null;
+let chosenFile = null, mode = 'toc', lastJson = null;
 const $ = id => document.getElementById(id);
-const dz = $('dropzone'), fileInput = $('fileInput'), genBtn = $('genBtn');
+const dz = $('dropzone'), fileInput = $('fileInput'), goBtn = $('goBtn');
+
+function setMode(m) {
+  mode = m;
+  $('modeToc').classList.toggle('active', m === 'toc');
+  $('modeUnit').classList.toggle('active', m === 'unit');
+  $('tocFields').style.display = m === 'toc' ? 'block' : 'none';
+  $('unitFields').style.display = m === 'unit' ? 'block' : 'none';
+  $('dzHint').textContent = m === 'toc'
+    ? 'Only the table-of-contents pages are read'
+    : 'Reads the unit’s pages → content + generated questions';
+}
 
 dz.onclick = () => fileInput.click();
 fileInput.onchange = () => setFile(fileInput.files[0]);
@@ -164,95 +171,96 @@ dz.addEventListener('drop', e => { if (e.dataTransfer.files.length) setFile(e.da
 
 function setFile(f) {
   if (!f) return;
-  if (f.type !== 'application/pdf' && !f.name.toLowerCase().endsWith('.pdf')) {
-    return showError('Please choose a PDF file.');
-  }
-  chosenFile = f;
-  $('fileName').textContent = '✓ ' + f.name;
-  genBtn.disabled = false;
-  showError('');
+  if (f.type !== 'application/pdf' && !f.name.toLowerCase().endsWith('.pdf')) return showError('Please choose a PDF file.');
+  chosenFile = f; $('fileName').textContent = '✓ ' + f.name; goBtn.disabled = false; showError('');
 }
+function showError(msg) { const el = $('errorMsg'); el.textContent = msg; el.style.display = msg ? 'block' : 'none'; }
+function esc(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function pr(o){ return `p. ${o.printed_start ?? o.start_page ?? '?'}–${o.printed_end ?? o.end_page ?? '?'}`; }
 
-function showError(msg) {
-  const el = $('errorMsg');
-  el.textContent = msg;
-  el.style.display = msg ? 'block' : 'none';
-}
-
-genBtn.onclick = async () => {
+goBtn.onclick = async () => {
   if (!chosenFile) return showError('Choose a PDF first.');
-  const start = parseInt($('startPage').value, 10);
-  const end = parseInt($('endPage').value, 10);
-  if (!start || !end || start > end) return showError('Check the start/end page numbers.');
-
-  showError('');
-  genBtn.disabled = true;
-  $('results').style.display = 'none';
-  $('loading').style.display = 'block';
-
-  const fd = new FormData();
-  fd.append('file', chosenFile);
-  fd.append('toc_start_page', start);
-  fd.append('toc_end_page', end);
-  fd.append('lang', $('lang').value);
-
-  try {
-    const res = await fetch('/extract-toc', { method: 'POST', body: fd });
-    const data = await res.json();
-    if (data.error) { showError(data.error); }
-    else { render(data); }
-  } catch (e) {
-    showError('Request failed: ' + e.message);
-  } finally {
-    $('loading').style.display = 'none';
-    genBtn.disabled = false;
+  const fd = new FormData(); fd.append('file', chosenFile);
+  let url;
+  if (mode === 'toc') {
+    const s = +$('tocStart').value, e = +$('tocEnd').value;
+    if (!s || !e || s > e) return showError('Check the TOC start/end pages.');
+    url = '/extract-toc';
+    fd.append('toc_start_page', s); fd.append('toc_end_page', e); fd.append('lang', $('tocLang').value);
+    $('loadingText').textContent = 'Reading TOC pages…';
+  } else {
+    const s = +$('uStart').value, e = +$('uEnd').value;
+    if (!s || !e || s > e) return showError('Check the unit PDF start/end pages.');
+    const types = [...document.querySelectorAll('.qtype:checked')].map(c => c.value);
+    if (!types.length) return showError('Pick at least one question type.');
+    url = '/extract-unit';
+    fd.append('pdf_start_page', s); fd.append('pdf_end_page', e); fd.append('lang', $('uLang').value);
+    fd.append('question_types', types.join(',')); fd.append('questions_per_lesson', $('uCount').value || '6');
+    $('loadingText').textContent = 'OCR + generating questions… a full unit can take several minutes.';
   }
+
+  showError(''); goBtn.disabled = true; $('results').style.display = 'none'; $('loading').style.display = 'block';
+  try {
+    const res = await fetch(url, { method: 'POST', body: fd });
+    const data = await res.json();
+    if (data.error) showError(data.error);
+    else { lastJson = data; (mode === 'toc' ? renderToc : renderUnit)(data); }
+  } catch (e) { showError('Request failed: ' + e.message); }
+  finally { $('loading').style.display = 'none'; goBtn.disabled = false; }
 };
 
-function esc(s) {
-  return String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+function downloadJson() {
+  if (!lastJson) return;
+  const blob = new Blob([JSON.stringify(lastJson, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = (mode === 'unit' ? 'unit' : 'toc') + '_extract.json';
+  a.click();
 }
-function pageRange(o) {
-  const a = o.start_page ?? '?', b = o.end_page ?? '?';
-  return `p. ${a}–${b}`;
+
+function toolbar(title) {
+  return `<div class="toolbar"><h2>${title}</h2><button class="dl-btn" onclick="downloadJson()">⬇ Download JSON</button></div>`;
+}
+function warns(data) {
+  if (!data.warnings || !data.warnings.length) return '';
+  return `<div class="warn-box"><strong>⚠ ${data.warnings.length} note(s):</strong><ul>${data.warnings.map(w => `<li>${esc(w)}</li>`).join('')}</ul></div>`;
 }
 
-function render(data) {
-  const ar = data.language === 'ar';
-  const out = $('results');
-  let html = '';
-
-  if (data.warnings && data.warnings.length) {
-    html += `<div class="warn-box"><strong>⚠ ${data.warnings.length} possible content change(s) flagged:</strong><ul>`
-      + data.warnings.map(w => `<li>${esc(w)}</li>`).join('') + `</ul></div>`;
-  }
-
-  (data.chapters || []).forEach((ch, ci) => {
-    html += `<div class="chapter">
-      <div class="chapter-head">
-        <span style="color:#7c83fd;font-weight:800">${ci + 1}</span>
-        <span class="chapter-title">${esc(ch.title)} ${ch.title_verified ? '' : '<span class="badge-warn">unverified</span>'}</span>
-        <span class="pages">${pageRange(ch)}</span>
-      </div>`;
+function renderToc(data) {
+  const out = $('results'); let h = toolbar('🗂️ Structure') + warns(data);
+  (data.chapters || []).forEach((ch, i) => {
+    h += `<div class="chapter"><div class="chapter-head"><span style="color:#7c83fd;font-weight:800">${i+1}</span>
+      <span class="chapter-title">${esc(ch.title)} ${ch.title_verified ? '' : '<span class="badge-warn">unverified</span>'}</span>
+      <span class="pages">${pr(ch)}</span></div>`;
     (ch.lessons || []).forEach(ls => {
-      html += `<div class="lesson">
-        <span class="lesson-title">${esc(ls.title)}</span>
+      h += `<div class="lesson"><span class="lesson-title">${esc(ls.title)}</span>
         ${ls.title_verified ? '<span class="badge-ok">✓</span>' : '<span class="badge-warn">unverified</span>'}
-        <span class="pages">${pageRange(ls)}</span>
-      </div>`;
+        <span class="pages">${pr(ls)}</span></div>`;
     });
-    html += `</div>`;
+    h += `</div>`;
   });
+  h += `<details><summary>Raw OCR transcription</summary><pre>${esc(data.source_transcription || '')}</pre></details>`;
+  out.className = data.language === 'ar' ? 'rtl' : ''; out.innerHTML = h; out.style.display = 'block';
+}
 
-  if (!(data.chapters || []).length) {
-    html += `<div class="card">No chapters were detected. Try adjusting the page range.</div>`;
-  }
-
-  html += `<details><summary>View raw OCR transcription</summary><pre>${esc(data.source_transcription || '')}</pre></details>`;
-
-  out.className = ar ? 'rtl' : '';
-  out.innerHTML = html;
-  out.style.display = 'block';
+function renderUnit(data) {
+  const out = $('results');
+  let h = toolbar(`📖 ${esc(data.unit_number || '')} ${esc(data.unit_title || '')}`.trim()) + warns(data);
+  (data.lessons || []).forEach(ls => {
+    h += `<div class="chapter"><div class="chapter-head">
+      <span style="color:#7c83fd;font-weight:800">${esc(ls.lesson_number || '•')}</span>
+      <span class="chapter-title">${esc(ls.title)} ${ls.content_verified ? '<span class="badge-ok">content ✓</span>' : '<span class="badge-warn">no content</span>'}</span>
+      <span class="pages">${pr(ls)}</span></div>`;
+    if (ls.content) h += `<details><summary>📄 Verbatim content (${ls.content.length} chars)</summary><pre>${esc(ls.content)}</pre></details>`;
+    (ls.questions || []).forEach((q, i) => {
+      h += `<div style="margin:0 18px"><div class="q"><div class="qt">${esc(q.type)} • Q${i+1}</div><div class="qq">${esc(q.question)}</div>`;
+      (q.options || []).forEach(o => h += `<div class="opt">${esc(o)}</div>`);
+      h += `<div class="ans">${esc(q.answer || '')}${q.explanation ? ' — ' + esc(q.explanation) : ''}</div></div></div>`;
+    });
+    if (!(ls.questions || []).length && ls.is_lesson) h += `<div style="padding:8px 18px;color:#64748b;font-size:0.85rem">No questions (no content in range).</div>`;
+    h += `</div>`;
+  });
+  out.className = data.language === 'ar' ? 'rtl' : ''; out.innerHTML = h; out.style.display = 'block';
 }
 </script>
 </body>

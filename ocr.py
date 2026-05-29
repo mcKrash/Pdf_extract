@@ -176,6 +176,15 @@ def _vision_client(backend: str):
             api_key=key,
         ), os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
 
+    if backend == "groq":
+        key = os.getenv("GROQ_API_KEY")
+        if not key:
+            raise RuntimeError("OCR_BACKEND=groq requires GROQ_API_KEY in .env")
+        return OpenAI(
+            base_url="https://api.groq.com/openai/v1",
+            api_key=key,
+        ), os.getenv("GROQ_MODEL", "meta-llama/llama-4-scout-17b-16e-instruct")
+
     key = os.getenv("OPENAI_API_KEY")
     if not key:
         raise RuntimeError("OCR_BACKEND=openai requires OPENAI_API_KEY in .env")
@@ -203,21 +212,29 @@ def _ocr_vision(img: Image.Image, backend: str) -> str:
 # --------------------------------------------------------------------------
 # Public entry point
 # --------------------------------------------------------------------------
+def _ocr_image(img: Image.Image, lang: str) -> str:
+    """Run the configured OCR backend on a single image."""
+    backend = os.getenv("OCR_BACKEND", "paddle").lower()
+    if backend == "paddle":
+        return _ocr_paddle(img, lang)
+    if backend == "easyocr":
+        return _ocr_easyocr(img, lang)
+    if backend in ("gemini", "openai", "groq"):
+        return _ocr_vision(img, backend)
+    raise RuntimeError(f"Unknown OCR_BACKEND: {backend!r}")
+
+
+def transcribe_pages(pdf_path: str, start_page: int, end_page: int, lang: str) -> list[dict]:
+    """OCR a PDF page range; return [{'pdf_page': int, 'text': str}, ...] (1-based)."""
+    images = render_pages(pdf_path, start_page, end_page)
+    out: list[dict] = []
+    for offset, img in enumerate(images):
+        pdf_page = start_page + offset
+        out.append({"pdf_page": pdf_page, "text": _ocr_image(img, lang).strip()})
+    return out
+
+
 def transcribe_toc(pdf_path: str, start_page: int, end_page: int, lang: str) -> str:
     """Render the TOC page range and return the full verbatim transcription."""
-    backend = os.getenv("OCR_BACKEND", "paddle").lower()
-    images = render_pages(pdf_path, start_page, end_page)
-
-    page_texts: list[str] = []
-    for i, img in enumerate(images, start=start_page):
-        if backend == "paddle":
-            text = _ocr_paddle(img, lang)
-        elif backend == "easyocr":
-            text = _ocr_easyocr(img, lang)
-        elif backend in ("gemini", "openai"):
-            text = _ocr_vision(img, backend)
-        else:
-            raise RuntimeError(f"Unknown OCR_BACKEND: {backend!r}")
-        page_texts.append(f"[page {i}]\n{text}".strip())
-
-    return "\n\n".join(page_texts).strip()
+    pages = transcribe_pages(pdf_path, start_page, end_page, lang)
+    return "\n\n".join(f"[page {p['pdf_page']}]\n{p['text']}".strip() for p in pages).strip()
